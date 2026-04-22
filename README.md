@@ -1,36 +1,131 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GRASP Cert
+
+Certificate generation and management system for amateur radio contests. Admins create events, log radio contacts (QSOs), and the system generates personalized PNG participation certificates for radio operators.
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Framework | [Next.js](https://nextjs.org) 16.2.4 (App Router) |
+| Language | TypeScript 5, React 19.2.4 |
+| Auth | [NextAuth](https://authjs.dev) 5 — credentials provider, JWT sessions, role-based (USER / ADMIN) |
+| Database | PostgreSQL 16, [Prisma](https://www.prisma.io) 7.7.0 ORM |
+| UI | Tailwind CSS 4, [shadcn/ui](https://ui.shadcn.com), Lucide icons, Sonner toasts |
+| Validation | Zod 4 |
+| Infrastructure | Docker Compose (PostgreSQL) |
+
+## Prerequisites
+
+- **Node.js** ≥ 20
+- **pnpm** (package manager)
+- **Docker** & Docker Compose
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 1. Install dependencies
+pnpm install
+
+# 2. Start PostgreSQL, push the schema, and run the dev server
+make start
+
+# 3. (Optional) Seed the database with an admin user
+make db-seed
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app will be available at [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Seeded Admin Account (local dev only)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Callsign | Password |
+|----------|----------|
+| `PY2ADM` | `admin123` |
 
-## Learn More
+## Available Commands
 
-To learn more about Next.js, take a look at the following resources:
+| Command | Description |
+|---------|-------------|
+| `make start` | Docker up + DB push + dev server (full startup) |
+| `make dev` | Dev server only |
+| `make build` | Production build |
+| `make install` | Install dependencies (`pnpm install`) |
+| `make up` / `make down` | Docker Compose control |
+| `make db-push` | Sync Prisma schema to DB |
+| `make db-migrate` | Run Prisma migrations |
+| `make db-seed` | Seed admin user |
+| `make db-studio` | Open Prisma Studio |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── auth.ts, auth.config.ts     # NextAuth config & callbacks
+├── middleware.ts                # Route protection
+├── lib/
+│   ├── prisma.ts               # Prisma client singleton
+│   ├── template-config.ts      # Certificate template types & defaults
+│   └── utils.ts                # cn() utility
+├── app/
+│   ├── page.tsx                # User dashboard — QSOs grouped by event
+│   ├── layout.tsx              # Root layout with navbar
+│   ├── login/, register/       # Auth pages
+│   ├── actions/                # Server Actions (mutations)
+│   │   ├── auth.ts             # User registration
+│   │   ├── event.ts            # CRUD events (admin)
+│   │   ├── qso.ts              # CRUD QSOs (admin)
+│   │   └── template.ts         # Upload background image, save config (admin)
+│   ├── api/
+│   │   ├── auth/[...nextauth]/ # NextAuth route handler
+│   │   └── cert/[qsoId]/       # Certificate PNG generation (ImageResponse)
+│   └── admin/
+│       └── events/             # Event list, create, edit, QSO management, template editor
+├── components/
+│   ├── ui/                     # shadcn/ui primitives
+│   ├── event-form.tsx          # Event create/edit form
+│   ├── event-table.tsx         # Events list table
+│   ├── qso-form.tsx            # QSO create form
+│   ├── qso-table.tsx           # QSO list table
+│   ├── template-editor.tsx     # Visual certificate template editor
+│   └── navbar.tsx              # Top navigation bar
+├── types/
+│   └── next-auth.d.ts          # NextAuth type augmentation
+prisma/
+├── schema.prisma               # Database schema
+└── seed.ts                     # Seeds admin user
+```
 
-## Deploy on Vercel
+## Data Model
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**User** — registered radio amateur (callsign, email, name, city, state, role).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Event** — radio contest (name, date range, allowed modes/bands, template config).
+
+**QSO** — a radio contact log entry linked to an event by `eventId`. References the participant by `participantCallsign` (string, not a FK to User).
+
+Events cascade-delete their QSOs.
+
+## Key User Flows
+
+### Radio Amateur (USER role)
+
+1. Register with callsign, name, email, city, state, and password.
+2. Log in with callsign + password.
+3. View dashboard showing all QSOs grouped by event.
+4. Download a personalized PNG certificate for each QSO.
+
+### Admin (ADMIN role)
+
+1. Log in with admin credentials.
+2. Create and manage contest events (name, dates, modes, bands).
+3. Log QSOs for each event (participant callsign, frequency, mode, RST sent/received).
+4. Customize certificate templates — upload a background image and position text fields (event name, callsign, participant name, dates, QSO info) via a visual editor.
+
+## Certificate Generation
+
+Certificates are generated on-the-fly at `GET /api/cert/[qsoId]` using Next.js `ImageResponse`. Each certificate renders:
+
+- Event name and date range
+- Participant callsign and name
+- QSO details (frequency, mode, RST, date/time)
+- Configurable background (uploaded image or default blue gradient)
+- Text fields positioned via a JSON `TemplateConfig` stored on the event
