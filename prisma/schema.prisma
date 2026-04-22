@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(uuid())
+  callsign     String   @unique
+  email        String   @unique
+  name         String
+  city         String
+  state        String
+  role         Role     @default(USER)
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Event {
+  id             String   @id @default(uuid())
+  name           String
+  startDate      DateTime @map("start_date")
+  endDate        DateTime @map("end_date")
+  modes          String[]
+  bands          String[]
+  templateBgUrl  String?  @map("template_bg_url")
+  templateConfig Json?    @map("template_config")
+  observations   String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  qsos QSO[]
+
+  @@map("events")
+}
+
+model QSO {
+  id                  String   @id @default(uuid())
+  eventId             String   @map("event_id")
+  participantCallsign String   @map("participant_callsign")
+  dateTime            DateTime @map("date_time")
+  frequency           String
+  mode                String
+  rstSent             String   @map("rst_sent")
+  rstReceived         String   @map("rst_received")
+  observations        String?
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("qsos")
+}

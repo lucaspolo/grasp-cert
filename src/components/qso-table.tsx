@@ -1,0 +1,92 @@
+"use client";
+
+import { deleteQSO } from "@/app/actions/qso";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+type QSORow = {
+  id: string;
+  participantCallsign: string;
+  dateTime: Date;
+  frequency: string;
+  mode: string;
+  rstSent: string;
+  rstReceived: string;
+  observations: string | null;
+};
+
+export function QSOTable({
+  qsos,
+  eventId,
+}: {
+  qsos: QSORow[];
+  eventId: string;
+}) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Indicativo</TableHead>
+          <TableHead>Data/Hora</TableHead>
+          <TableHead>Frequência</TableHead>
+          <TableHead>Modo</TableHead>
+          <TableHead>RST S/R</TableHead>
+          <TableHead>Obs</TableHead>
+          <TableHead className="text-right">Ações</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {qsos.length === 0 && (
+          <TableRow>
+            <TableCell
+              colSpan={7}
+              className="text-center text-muted-foreground"
+            >
+              Nenhum QSO lançado.
+            </TableCell>
+          </TableRow>
+        )}
+        {qsos.map((qso) => (
+          <TableRow key={qso.id}>
+            <TableCell className="font-medium">
+              {qso.participantCallsign}
+            </TableCell>
+            <TableCell>
+              {new Date(qso.dateTime).toLocaleString("pt-BR", {
+                timeZone: "UTC",
+                dateStyle: "short",
+                timeStyle: "short",
+              })}
+            </TableCell>
+            <TableCell>{qso.frequency}</TableCell>
+            <TableCell>{qso.mode}</TableCell>
+            <TableCell>
+              {qso.rstSent}/{qso.rstReceived}
+            </TableCell>
+            <TableCell className="max-w-[200px] truncate">
+              {qso.observations ?? "—"}
+            </TableCell>
+            <TableCell className="text-right">
+              <form
+                action={async () => {
+                  await deleteQSO(qso.id, eventId);
+                }}
+              >
+                <Button variant="destructive" size="sm" type="submit">
+                  Excluir
+                </Button>
+              </form>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}

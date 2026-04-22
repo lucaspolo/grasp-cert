@@ -1,0 +1,56 @@
+import { auth, signOut } from "@/auth";
+import Link from "next/link";
+
+export async function Navbar() {
+  const session = await auth();
+
+  if (!session?.user) return null;
+
+  const isAdmin = session.user.role === "ADMIN";
+
+  return (
+    <header className="border-b bg-background">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
+        <div className="flex items-center gap-6">
+          <Link href="/" className="font-semibold text-lg">
+            GRASP Cert
+          </Link>
+          <nav className="flex items-center gap-4 text-sm">
+            <Link
+              href="/"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Meus Certificados
+            </Link>
+            {isAdmin && (
+              <Link
+                href="/admin/events"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Admin
+              </Link>
+            )}
+          </nav>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-muted-foreground">
+            {session.user.callsign}
+          </span>
+          <form
+            action={async () => {
+              "use server";
+              await signOut({ redirectTo: "/login" });
+            }}
+          >
+            <button
+              type="submit"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Sair
+            </button>
+          </form>
+        </div>
+      </div>
+    </header>
+  );
+}
