@@ -14,6 +14,7 @@ import {
 type QSORow = {
   id: string;
   participantCallsign: string;
+  operatorCallsign: string | null;
   dateTime: Date;
   frequency: string;
   mode: string;
@@ -34,6 +35,7 @@ export function QSOTable({
       <TableHeader>
         <TableRow>
           <TableHead>Indicativo</TableHead>
+          <TableHead>Operador</TableHead>
           <TableHead>Data/Hora</TableHead>
           <TableHead>Frequência</TableHead>
           <TableHead>Modo</TableHead>
@@ -46,7 +48,7 @@ export function QSOTable({
         {qsos.length === 0 && (
           <TableRow>
             <TableCell
-              colSpan={7}
+              colSpan={8}
               className="text-center text-muted-foreground"
             >
               Nenhum QSO lançado.
@@ -57,6 +59,9 @@ export function QSOTable({
           <TableRow key={qso.id}>
             <TableCell className="font-medium">
               {qso.participantCallsign}
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              {qso.operatorCallsign ?? "—"}
             </TableCell>
             <TableCell>
               {new Date(qso.dateTime).toLocaleString("pt-BR", {

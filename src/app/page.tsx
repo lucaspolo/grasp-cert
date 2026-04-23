@@ -31,6 +31,18 @@ export default async function Home() {
       })
     : [];
 
+  // Query events where the user was the operator (admin who logged QSOs)
+  const operatorQsos =
+    callsign && session?.user?.role === "ADMIN"
+      ? await prisma.qSO.findMany({
+          where: { operatorCallsign: { equals: callsign, mode: "insensitive" } },
+          include: {
+            event: { select: { id: true, name: true, startDate: true, endDate: true } },
+          },
+          orderBy: { dateTime: "desc" },
+        })
+      : [];
+
   // Group QSOs by event
   const grouped = new Map<
     string,
@@ -42,6 +54,32 @@ export default async function Home() {
       existing.qsos.push(qso);
     } else {
       grouped.set(qso.eventId, { event: qso.event, qsos: [qso] });
+    }
+  }
+
+  // Group operator QSOs by event, collecting unique modes and bands
+  const operatorGrouped = new Map<
+    string,
+    {
+      event: { id: string; name: string; startDate: Date; endDate: Date };
+      qsoCount: number;
+      modes: Set<string>;
+      bands: Set<string>;
+    }
+  >();
+  for (const qso of operatorQsos) {
+    const existing = operatorGrouped.get(qso.eventId);
+    if (existing) {
+      existing.qsoCount++;
+      existing.modes.add(qso.mode);
+      existing.bands.add(qso.frequency);
+    } else {
+      operatorGrouped.set(qso.eventId, {
+        event: qso.event,
+        qsoCount: 1,
+        modes: new Set([qso.mode]),
+        bands: new Set([qso.frequency]),
+      });
     }
   }
 
@@ -114,6 +152,60 @@ export default async function Home() {
             </Card>
           ))}
         </div>
+      )}
+
+      {operatorGrouped.size > 0 && (
+        <>
+          <h2 className="mt-10 text-xl font-bold">
+            Eventos que você operou
+          </h2>
+          <div className="mt-4 space-y-6">
+            {Array.from(operatorGrouped.values()).map(
+              ({ event, qsoCount, modes, bands }) => (
+                <Card key={event.id}>
+                  <CardHeader>
+                    <CardTitle>{event.name}</CardTitle>
+                    <CardDescription>
+                      {new Date(event.startDate).toLocaleDateString("pt-BR")}{" "}
+                      —{" "}
+                      {new Date(event.endDate).toLocaleDateString("pt-BR")} ·{" "}
+                      <Badge variant="secondary">
+                        {qsoCount} QSO{qsoCount !== 1 ? "s" : ""} lançado
+                        {qsoCount !== 1 ? "s" : ""}
+                      </Badge>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+                      <p>
+                        <span className="font-medium text-foreground">
+                          Modos:
+                        </span>{" "}
+                        {Array.from(modes).sort().join(", ")}
+                      </p>
+                      <p>
+                        <span className="font-medium text-foreground">
+                          Faixas:
+                        </span>{" "}
+                        {Array.from(bands).sort().join(", ")}
+                      </p>
+                    </div>
+                    <div className="mt-4">
+                      <Link
+                        href={`/api/cert/operator/${event.id}`}
+                        target="_blank"
+                      >
+                        <Button variant="outline" size="sm">
+                          Download Certificado de Operador
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            )}
+          </div>
+        </>
       )}
     </div>
   );

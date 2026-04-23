@@ -39,7 +39,7 @@ export async function createQSO(
   _prevState: QSOFormState,
   formData: FormData
 ): Promise<QSOFormState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsed = qsoSchema.safeParse({
     participantCallsign: formData.get("participantCallsign"),
@@ -62,6 +62,7 @@ export async function createQSO(
     data: {
       eventId,
       participantCallsign,
+      operatorCallsign: session.user.callsign ?? null,
       dateTime: new Date(dateTime),
       frequency,
       mode,
