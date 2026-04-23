@@ -3,9 +3,9 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { redirect } from "next/navigation";
 import { z } from "zod";
+import sharp from "sharp";
 import type { TemplateConfig } from "@/lib/template-config";
 
 async function requireAdmin() {
@@ -29,7 +29,124 @@ const templateConfigSchema = z.object({
   ),
 });
 
-export async function uploadTemplate(eventId: string, formData: FormData) {
+const templateNameSchema = z.object({
+  name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres").max(100),
+});
+
+export type TemplateFormState = {
+  errors?: Record<string, string[]>;
+  message?: string;
+};
+
+// --- CRUD ---
+
+export async function listTemplates() {
+  await requireAdmin();
+  return prisma.template.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      bgMimeType: true,
+      createdAt: true,
+      _count: { select: { events: true } },
+    },
+  });
+}
+
+export async function getTemplate(id: string) {
+  return prisma.template.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      bgMimeType: true,
+      config: true,
+      _count: { select: { events: true } },
+    },
+  });
+}
+
+export async function createTemplate(
+  _prevState: TemplateFormState,
+  formData: FormData
+): Promise<TemplateFormState> {
+  await requireAdmin();
+
+  const parsed = templateNameSchema.safeParse({
+    name: formData.get("name"),
+  });
+
+  if (!parsed.success) {
+    return { errors: parsed.error.flatten().fieldErrors };
+  }
+
+  const template = await prisma.template.create({
+    data: { name: parsed.data.name },
+  });
+
+  redirect(`/admin/templates/${template.id}/edit`);
+}
+
+export async function updateTemplateName(
+  templateId: string,
+  _prevState: TemplateFormState,
+  formData: FormData
+): Promise<TemplateFormState> {
+  await requireAdmin();
+
+  const parsed = templateNameSchema.safeParse({
+    name: formData.get("name"),
+  });
+
+  if (!parsed.success) {
+    return { errors: parsed.error.flatten().fieldErrors };
+  }
+
+  await prisma.template.update({
+    where: { id: templateId },
+    data: { name: parsed.data.name },
+  });
+
+  revalidatePath(`/admin/templates/${templateId}/edit`);
+  revalidatePath("/admin/templates");
+  return { message: "Nome atualizado." };
+}
+
+export async function deleteTemplate(templateId: string) {
+  await requireAdmin();
+
+  const template = await prisma.template.findUnique({
+    where: { id: templateId },
+    select: { _count: { select: { events: true } } },
+  });
+
+  if (!template) {
+    return { error: "Template não encontrado." };
+  }
+
+  if (template._count.events > 0) {
+    return {
+      error: `Não é possível excluir — ${template._count.events} evento(s) usam este template.`,
+    };
+  }
+
+  await prisma.template.delete({ where: { id: templateId } });
+
+  revalidatePath("/admin/templates");
+  return { success: true };
+}
+
+// --- Background Image ---
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MIN_WIDTH = 800;
+const MIN_HEIGHT = 500;
+const MAX_WIDTH = 1920;
+const MAX_HEIGHT = 1200;
+const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+export async function uploadTemplateBg(templateId: string, formData: FormData) {
   await requireAdmin();
 
   const file = formData.get("file") as File | null;
@@ -37,39 +154,50 @@ export async function uploadTemplate(eventId: string, formData: FormData) {
     return { error: "Nenhum arquivo enviado." };
   }
 
-  const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
-  if (!allowedTypes.includes(file.type)) {
+  if (!ALLOWED_TYPES.includes(file.type)) {
     return { error: "Formato inválido. Use PNG, JPEG ou WebP." };
   }
 
-  if (file.size > 5 * 1024 * 1024) {
+  if (file.size > MAX_FILE_SIZE) {
     return { error: "Arquivo muito grande. Máximo 5MB." };
   }
 
-  // TODO: Replace with S3/R2 upload in production
-  // For now, save locally to public/templates/
-  const ext = file.name.split(".").pop() || "png";
-  const sanitizedName = `${eventId}.${ext}`.replace(/[^a-zA-Z0-9.-]/g, "");
-  const dir = path.join(process.cwd(), "public", "templates");
-  await mkdir(dir, { recursive: true });
-
   const buffer = Buffer.from(await file.arrayBuffer());
-  const filePath = path.join(dir, sanitizedName);
-  await writeFile(filePath, buffer);
 
-  const templateBgUrl = `/templates/${sanitizedName}`;
+  // Validate image dimensions with sharp
+  const metadata = await sharp(buffer).metadata();
+  if (!metadata.width || !metadata.height) {
+    return { error: "Não foi possível ler as dimensões da imagem." };
+  }
 
-  await prisma.event.update({
-    where: { id: eventId },
-    data: { templateBgUrl },
+  if (metadata.width < MIN_WIDTH || metadata.height < MIN_HEIGHT) {
+    return {
+      error: `Resolução mínima: ${MIN_WIDTH}×${MIN_HEIGHT}px. A imagem tem ${metadata.width}×${metadata.height}px.`,
+    };
+  }
+
+  if (metadata.width > MAX_WIDTH || metadata.height > MAX_HEIGHT) {
+    return {
+      error: `Resolução máxima: ${MAX_WIDTH}×${MAX_HEIGHT}px. A imagem tem ${metadata.width}×${metadata.height}px.`,
+    };
+  }
+
+  await prisma.template.update({
+    where: { id: templateId },
+    data: {
+      bgImage: buffer,
+      bgMimeType: file.type,
+    },
   });
 
-  revalidatePath(`/admin/events/${eventId}/template`);
-  return { success: true, url: templateBgUrl };
+  revalidatePath(`/admin/templates/${templateId}/edit`);
+  return { success: true };
 }
 
+// --- Config ---
+
 export async function saveTemplateConfig(
-  eventId: string,
+  templateId: string,
   config: TemplateConfig
 ) {
   await requireAdmin();
@@ -79,24 +207,11 @@ export async function saveTemplateConfig(
     return { error: "Configuração inválida." };
   }
 
-  await prisma.event.update({
-    where: { id: eventId },
-    data: { templateConfig: parsed.data },
+  await prisma.template.update({
+    where: { id: templateId },
+    data: { config: parsed.data },
   });
 
-  revalidatePath(`/admin/events/${eventId}/template`);
+  revalidatePath(`/admin/templates/${templateId}/edit`);
   return { success: true };
-}
-
-export async function getEventTemplate(eventId: string) {
-  const event = await prisma.event.findUnique({
-    where: { id: eventId },
-    select: {
-      id: true,
-      name: true,
-      templateBgUrl: true,
-      templateConfig: true,
-    },
-  });
-  return event;
 }

@@ -23,12 +23,20 @@ export async function Navbar() {
               Meus Certificados
             </Link>
             {isAdmin && (
-              <Link
-                href="/admin/events"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Admin
-              </Link>
+              <>
+                <Link
+                  href="/admin/events"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Eventos
+                </Link>
+                <Link
+                  href="/admin/templates"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Templates
+                </Link>
+              </>
             )}
           </nav>
         </div>

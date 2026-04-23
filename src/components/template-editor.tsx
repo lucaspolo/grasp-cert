@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import {
-  uploadTemplate,
+  uploadTemplateBg,
   saveTemplateConfig,
 } from "@/app/actions/template";
 import {
@@ -26,31 +26,37 @@ const PREVIEW_WIDTH = 800;
 const PREVIEW_HEIGHT = 500;
 
 export function TemplateEditor({
-  eventId,
-  eventName,
-  initialBgUrl,
+  templateId,
+  templateName,
+  hasBgImage,
   initialConfig,
 }: {
-  eventId: string;
-  eventName: string;
-  initialBgUrl: string | null;
+  templateId: string;
+  templateName: string;
+  hasBgImage: boolean;
   initialConfig: TemplateConfig | null;
 }) {
-  const [bgUrl, setBgUrl] = useState(initialBgUrl);
+  const [hasImage, setHasImage] = useState(hasBgImage);
+  const [imageKey, setImageKey] = useState(0);
   const [config, setConfig] = useState<TemplateConfig>(
     initialConfig ?? getDefaultTemplateConfig()
   );
   const [uploading, startUpload] = useTransition();
   const [saving, startSave] = useTransition();
 
+  const bgImageUrl = hasImage
+    ? `/api/templates/${templateId}/image?v=${imageKey}`
+    : null;
+
   function handleUpload(formData: FormData) {
     startUpload(async () => {
-      const result = await uploadTemplate(eventId, formData);
+      const result = await uploadTemplateBg(templateId, formData);
       if (result.error) {
         toast.error(result.error);
       } else {
-        setBgUrl(result.url!);
-        toast.success("Template enviado com sucesso.");
+        setHasImage(true);
+        setImageKey((k) => k + 1);
+        toast.success("Imagem enviada com sucesso.");
       }
     });
   }
@@ -71,7 +77,7 @@ export function TemplateEditor({
 
   function handleSave() {
     startSave(async () => {
-      const result = await saveTemplateConfig(eventId, config);
+      const result = await saveTemplateConfig(templateId, config);
       if (result.error) {
         toast.error(result.error);
       } else {
@@ -94,9 +100,9 @@ export function TemplateEditor({
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
-              <strong>Dimensões:</strong> exatamente{" "}
-              <code className="text-foreground">800 × 500 px</code> (proporção
-              16:10). Imagens fora dessa proporção serão esticadas.
+              <strong>Dimensões:</strong> mínimo{" "}
+              <code className="text-foreground">800 × 500 px</code>, máximo{" "}
+              <code className="text-foreground">1920 × 1200 px</code>.
             </li>
             <li>
               <strong>Formatos aceitos:</strong> PNG (recomendado), JPEG ou
@@ -132,8 +138,7 @@ export function TemplateEditor({
         <CardHeader>
           <CardTitle>Imagem de Fundo</CardTitle>
           <CardDescription>
-            Envie uma imagem PNG, JPEG ou WebP (máx 5MB) para usar como fundo
-            do certificado.
+            Envie uma imagem PNG, JPEG ou WebP (mín 800×500, máx 1920×1200, até 5MB).
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -151,9 +156,9 @@ export function TemplateEditor({
               {uploading ? "Enviando..." : "Enviar"}
             </Button>
           </form>
-          {bgUrl && (
+          {hasImage && (
             <p className="mt-2 text-sm text-muted-foreground">
-              Atual: <code>{bgUrl}</code>
+              ✓ Imagem de fundo configurada.
             </p>
           )}
         </CardContent>
@@ -173,13 +178,13 @@ export function TemplateEditor({
             style={{
               width: PREVIEW_WIDTH,
               height: PREVIEW_HEIGHT,
-              background: bgUrl
-                ? `url(${bgUrl}) center/cover`
+              background: bgImageUrl
+                ? `url(${bgImageUrl}) center/cover`
                 : "linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%)",
             }}
           >
             {/* Decorative border overlay when no custom bg */}
-            {!bgUrl && (
+            {!bgImageUrl && (
               <div className="absolute inset-3 border-2 border-amber-400/40 rounded-lg" />
             )}
 
@@ -193,12 +198,12 @@ export function TemplateEditor({
                   fontSize: field.fontSize,
                   color: field.color,
                   transform: "translateX(-50%)",
-                  textShadow: bgUrl
+                  textShadow: bgImageUrl
                     ? "none"
                     : "0 1px 3px rgba(0,0,0,0.3)",
                 }}
               >
-                {key === "eventName" && eventName}
+                {key === "eventName" && templateName}
                 {key === "participantCallsign" && "PY2ABC"}
                 {key === "participantName" && "João da Silva"}
                 {key === "eventDate" && "01/01/2026 — 02/01/2026"}

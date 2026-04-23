@@ -26,20 +26,34 @@ model User {
   @@map("users")
 }
 
-model Event {
-  id             String   @id @default(uuid())
-  name           String
-  startDate      DateTime @map("start_date")
-  endDate        DateTime @map("end_date")
-  modes          String[]
-  bands          String[]
-  templateBgUrl  String?  @map("template_bg_url")
-  templateConfig Json?    @map("template_config")
-  observations   String?
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+model Template {
+  id         String   @id @default(uuid())
+  name       String
+  bgImage    Bytes?   @map("bg_image")
+  bgMimeType String?  @map("bg_mime_type")
+  config     Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
-  qsos QSO[]
+  events Event[]
+
+  @@map("templates")
+}
+
+model Event {
+  id           String    @id @default(uuid())
+  name         String
+  startDate    DateTime  @map("start_date")
+  endDate      DateTime  @map("end_date")
+  modes        String[]
+  bands        String[]
+  templateId   String?   @map("template_id")
+  observations String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  template Template? @relation(fields: [templateId], references: [id])
+  qsos     QSO[]
 
   @@map("events")
 }

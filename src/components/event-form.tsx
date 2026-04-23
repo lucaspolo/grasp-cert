@@ -14,17 +14,25 @@ type EventData = {
   modes: string[];
   bands: string[];
   observations: string | null;
+  templateId: string | null;
+};
+
+type TemplateOption = {
+  id: string;
+  name: string;
 };
 
 export function EventForm({
   action,
   defaultValues,
+  templates,
 }: {
   action: (
     prevState: EventFormState,
     formData: FormData
   ) => Promise<EventFormState>;
   defaultValues?: EventData;
+  templates?: TemplateOption[];
 }) {
   const [state, formAction, pending] = useActionState(action, {});
 
@@ -117,6 +125,25 @@ export function EventForm({
           rows={3}
         />
       </div>
+
+      {templates && templates.length > 0 && (
+        <div className="space-y-2">
+          <Label htmlFor="templateId">Template do Certificado</Label>
+          <select
+            id="templateId"
+            name="templateId"
+            defaultValue={defaultValues?.templateId ?? ""}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+          >
+            <option value="">Padrão (sem template)</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <Button type="submit" disabled={pending}>
         {pending ? "Salvando..." : "Salvar"}

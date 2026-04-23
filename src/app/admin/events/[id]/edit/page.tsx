@@ -1,4 +1,5 @@
 import { getEvent, updateEvent } from "@/app/actions/event";
+import { listTemplates } from "@/app/actions/template";
 import { EventForm } from "@/components/event-form";
 import { notFound } from "next/navigation";
 
@@ -14,7 +15,10 @@ export default async function EditEventPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const event = await getEvent(id);
+  const [event, templates] = await Promise.all([
+    getEvent(id),
+    listTemplates(),
+  ]);
 
   if (!event) notFound();
 
@@ -32,7 +36,9 @@ export default async function EditEventPage({
           modes: event.modes,
           bands: event.bands,
           observations: event.observations,
+          templateId: event.templateId,
         }}
+        templates={templates.map((t) => ({ id: t.id, name: t.name }))}
       />
     </div>
   );

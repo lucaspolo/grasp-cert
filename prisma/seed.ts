@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { hashSync } from "bcryptjs";
+import { DEFAULT_TEMPLATE_CONFIG } from "../src/lib/template-config";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -25,6 +26,23 @@ async function main() {
   });
 
   console.log(`Seed: admin user created → ${admin.callsign} (${admin.email})`);
+
+  // Seed default template
+  const existing = await prisma.template.findFirst({
+    where: { name: "Padrão" },
+  });
+
+  if (!existing) {
+    const template = await prisma.template.create({
+      data: {
+        name: "Padrão",
+        config: DEFAULT_TEMPLATE_CONFIG,
+      },
+    });
+    console.log(`Seed: default template created → ${template.name} (${template.id})`);
+  } else {
+    console.log(`Seed: default template already exists → ${existing.name} (${existing.id})`);
+  }
 }
 
 main()

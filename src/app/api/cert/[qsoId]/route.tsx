@@ -20,7 +20,15 @@ export async function GET(
 
   const qso = await prisma.qSO.findUnique({
     where: { id: qsoId },
-    include: { event: true },
+    include: {
+      event: {
+        include: {
+          template: {
+            select: { config: true, bgImage: true, bgMimeType: true },
+          },
+        },
+      },
+    },
   });
 
   if (!qso) {
@@ -35,8 +43,33 @@ export async function GET(
     return new Response("Forbidden", { status: 403 });
   }
 
-  const config: TemplateConfig =
-    (qso.event.templateConfig as TemplateConfig) ?? getDefaultTemplateConfig();
+  // Resolve template: event's template > default "Padrão" template > code fallback
+  let templateConfig: TemplateConfig | null = null;
+  let bgDataUri: string | null = null;
+
+  const template = qso.event.template;
+  if (template) {
+    templateConfig = template.config as TemplateConfig | null;
+    if (template.bgImage && template.bgMimeType) {
+      const b64 = Buffer.from(template.bgImage).toString("base64");
+      bgDataUri = `data:${template.bgMimeType};base64,${b64}`;
+    }
+  } else {
+    // Fallback: try to load the seeded "Padrão" template
+    const defaultTemplate = await prisma.template.findFirst({
+      where: { name: "Padrão" },
+      select: { config: true, bgImage: true, bgMimeType: true },
+    });
+    if (defaultTemplate) {
+      templateConfig = defaultTemplate.config as TemplateConfig | null;
+      if (defaultTemplate.bgImage && defaultTemplate.bgMimeType) {
+        const b64 = Buffer.from(defaultTemplate.bgImage).toString("base64");
+        bgDataUri = `data:${defaultTemplate.bgMimeType};base64,${b64}`;
+      }
+    }
+  }
+
+  const config: TemplateConfig = templateConfig ?? getDefaultTemplateConfig();
 
   // Lookup participant name from users table (may not exist)
   const participant = await prisma.user.findFirst({
@@ -56,8 +89,7 @@ export async function GET(
     timeZone: "UTC",
   });
 
-  // TODO: When S3 integration is added, load templateBgUrl from S3 as background image
-  // For now, use a styled gradient background as default template
+  const hasCustomBg = !!bgDataUri;
 
   return new ImageResponse(
     (
@@ -67,46 +99,52 @@ export async function GET(
           height: 500,
           display: "flex",
           position: "relative",
-          background: "linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%)",
+          background: bgDataUri
+            ? `url(${bgDataUri}) center/cover`
+            : "linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%)",
           fontFamily: "sans-serif",
         }}
       >
-        {/* Decorative border */}
-        <div
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 12,
-            right: 12,
-            bottom: 12,
-            border: "2px solid rgba(251, 191, 36, 0.4)",
-            borderRadius: 12,
-            display: "flex",
-          }}
-        />
+        {/* Decorative border — only when no custom background */}
+        {!hasCustomBg && (
+          <div
+            style={{
+              position: "absolute",
+              top: 12,
+              left: 12,
+              right: 12,
+              bottom: 12,
+              border: "2px solid rgba(251, 191, 36, 0.4)",
+              borderRadius: 12,
+              display: "flex",
+            }}
+          />
+        )}
 
         {/* Header badge */}
-        <div
-          style={{
-            position: "absolute",
-            top: 24,
-            left: 0,
-            right: 0,
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
-          <span
+        {!hasCustomBg && (
+          <div
             style={{
-              fontSize: 14,
-              color: "#fbbf24",
-              letterSpacing: 4,
-              textTransform: "uppercase",
+              position: "absolute",
+              top: 24,
+              left: 0,
+              right: 0,
+              display: "flex",
+              justifyContent: "center",
             }}
           >
-            Certificado de Participação
-          </span>
-        </div>
+            <span
+              style={{
+                fontSize: 14,
+                color: "#fbbf24",
+                letterSpacing: 4,
+                textTransform: "uppercase",
+              }}
+            >
+              Certificado de Participação
+            </span>
+          </div>
+        )}
 
         {/* Event name */}
         <span
@@ -115,7 +153,7 @@ export async function GET(
             left: fields.eventName.x,
             top: fields.eventName.y,
             fontSize: fields.eventName.fontSize,
-            color: fields.eventName.color === "#1a1a1a" ? "#e2e8f0" : fields.eventName.color,
+            color: !hasCustomBg && fields.eventName.color === "#1a1a1a" ? "#e2e8f0" : fields.eventName.color,
             fontWeight: 700,
             transform: "translateX(-50%)",
             textAlign: "center",
@@ -133,7 +171,7 @@ export async function GET(
             top: fields.participantCallsign.y,
             fontSize: fields.participantCallsign.fontSize,
             color:
-              fields.participantCallsign.color === "#0f172a"
+              !hasCustomBg && fields.participantCallsign.color === "#0f172a"
                 ? "#fbbf24"
                 : fields.participantCallsign.color,
             fontWeight: 700,
@@ -152,7 +190,7 @@ export async function GET(
             top: fields.participantName.y,
             fontSize: fields.participantName.fontSize,
             color:
-              fields.participantName.color === "#334155"
+              !hasCustomBg && fields.participantName.color === "#334155"
                 ? "#94a3b8"
                 : fields.participantName.color,
             transform: "translateX(-50%)",
@@ -170,7 +208,7 @@ export async function GET(
             top: fields.eventDate.y,
             fontSize: fields.eventDate.fontSize,
             color:
-              fields.eventDate.color === "#475569"
+              !hasCustomBg && fields.eventDate.color === "#475569"
                 ? "#cbd5e1"
                 : fields.eventDate.color,
             transform: "translateX(-50%)",
@@ -188,7 +226,7 @@ export async function GET(
             top: fields.qsoInfo.y,
             fontSize: fields.qsoInfo.fontSize,
             color:
-              fields.qsoInfo.color === "#475569"
+              !hasCustomBg && fields.qsoInfo.color === "#475569"
                 ? "#94a3b8"
                 : fields.qsoInfo.color,
             transform: "translateX(-50%)",
@@ -206,7 +244,7 @@ export async function GET(
             top: fields.qsoDateTime.y,
             fontSize: fields.qsoDateTime.fontSize,
             color:
-              fields.qsoDateTime.color === "#475569"
+              !hasCustomBg && fields.qsoDateTime.color === "#475569"
                 ? "#94a3b8"
                 : fields.qsoDateTime.color,
             transform: "translateX(-50%)",
@@ -227,7 +265,7 @@ export async function GET(
             justifyContent: "center",
           }}
         >
-          <span style={{ fontSize: 12, color: "#64748b" }}>
+          <span style={{ fontSize: 12, color: hasCustomBg ? "#666" : "#64748b" }}>
             Gerado por GRASP-CERT
           </span>
         </div>

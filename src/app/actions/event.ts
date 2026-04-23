@@ -27,6 +27,7 @@ const eventSchema = z.object({
       .filter(Boolean)
   ),
   observations: z.string().optional(),
+  templateId: z.string().optional(),
 });
 
 async function requireAdmin() {
@@ -55,13 +56,14 @@ export async function createEvent(
     modes: formData.get("modes"),
     bands: formData.get("bands"),
     observations: formData.get("observations"),
+    templateId: formData.get("templateId") || undefined,
   });
 
   if (!parsed.success) {
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
-  const { name, startDate, endDate, modes, bands, observations } = parsed.data;
+  const { name, startDate, endDate, modes, bands, observations, templateId } = parsed.data;
 
   await prisma.event.create({
     data: {
@@ -71,6 +73,7 @@ export async function createEvent(
       modes,
       bands,
       observations: observations || null,
+      templateId: templateId || null,
     },
   });
 
@@ -92,13 +95,14 @@ export async function updateEvent(
     modes: formData.get("modes"),
     bands: formData.get("bands"),
     observations: formData.get("observations"),
+    templateId: formData.get("templateId") || undefined,
   });
 
   if (!parsed.success) {
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
-  const { name, startDate, endDate, modes, bands, observations } = parsed.data;
+  const { name, startDate, endDate, modes, bands, observations, templateId } = parsed.data;
 
   await prisma.event.update({
     where: { id: eventId },
@@ -109,6 +113,7 @@ export async function updateEvent(
       modes,
       bands,
       observations: observations || null,
+      templateId: templateId || null,
     },
   });
 
@@ -127,10 +132,16 @@ export async function deleteEvent(eventId: string) {
 export async function listEvents() {
   return prisma.event.findMany({
     orderBy: { startDate: "desc" },
-    include: { _count: { select: { qsos: true } } },
+    include: {
+      _count: { select: { qsos: true } },
+      template: { select: { id: true, name: true } },
+    },
   });
 }
 
 export async function getEvent(id: string) {
-  return prisma.event.findUnique({ where: { id } });
+  return prisma.event.findUnique({
+    where: { id },
+    include: { template: { select: { id: true, name: true } } },
+  });
 }
