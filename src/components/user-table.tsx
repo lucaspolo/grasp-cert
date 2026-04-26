@@ -98,7 +98,7 @@ export function UserTable({ users }: { users: UserRow[] }) {
             </TableCell>
             <TableCell>
               <Select
-                defaultValue={user.role}
+                value={user.role}
                 onValueChange={(value) => value && handleRoleChange(user.id, value)}
               >
                 <SelectTrigger className="w-[130px]">
