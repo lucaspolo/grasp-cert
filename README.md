@@ -20,13 +20,28 @@ Certificate generation and management system for amateur radio contests. Admins 
 - **pnpm** (package manager)
 - **Docker** & Docker Compose
 
+## Environment Variables
+
+Copy `.env.example` to `.env` and configure:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://grasp:grasp@localhost:5432/grasp_cert` |
+| `AUTH_SECRET` | NextAuth secret for JWT signing (generate with `openssl rand -base64 32`) | `change-me-in-production` |
+| `AUTH_URL` | Base URL of the application (used by NextAuth) | `http://localhost:3000` |
+| `NEXT_PUBLIC_APP_URL` | Public base URL (used in emails and client-side links) | `http://localhost:3000` |
+| `RESEND_API_KEY` | API key from [Resend](https://resend.com) for sending emails (password reset) | `re_xxxxxxxxx` |
+
 ## Getting Started
 
 ```bash
 # 1. Install dependencies
 pnpm install
 
-# 2. Start PostgreSQL, push the schema, and run the dev server
+# 2. Copy and configure environment variables
+cp .env.example .env
+
+# 3. Start PostgreSQL, push the schema, and run the dev server
 make start
 
 # 3. (Optional) Seed the database with an admin user

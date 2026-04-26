@@ -84,6 +84,14 @@ function LoginForm() {
                 type="password"
                 required
               />
+              <div className="text-right">
+                <Link
+                  href="/esqueci-minha-senha"
+                  className="text-sm text-muted-foreground underline hover:text-primary"
+                >
+                  Esqueci minha senha
+                </Link>
+              </div>
             </div>
 
             <Button type="submit" className="w-full" disabled={pending}>
