@@ -72,7 +72,7 @@ export function OperatorAssignment({
     <div>
       <h2 className="text-lg font-semibold mb-4">Operadores Designados</h2>
 
-      {unassigned.length > 0 && (
+      {unassigned.length > 0 ? (
         <div className="flex items-center gap-2 mb-4">
           <Select value={selectedUserId} onValueChange={(v) => setSelectedUserId(v ?? "")}>
             <SelectTrigger className="w-[250px]">
@@ -90,6 +90,11 @@ export function OperatorAssignment({
             Designar
           </Button>
         </div>
+      ) : (
+        <p className="text-sm text-muted-foreground mb-4">
+          Nenhum operador disponível. Promova usuários ao cargo de Operador na página de{" "}
+          <a href="/admin/users" className="underline hover:text-foreground">Usuários</a>.
+        </p>
       )}
 
       <Table>
