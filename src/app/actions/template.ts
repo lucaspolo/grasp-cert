@@ -1,20 +1,12 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { requireRole } from "@/lib/auth-utils";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import sharp from "sharp";
 import type { TemplateConfig } from "@/lib/template-config";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
-    throw new Error("Unauthorized");
-  }
-  return session;
-}
 
 const templateConfigSchema = z.object({
   fields: z.record(
@@ -41,7 +33,7 @@ export type TemplateFormState = {
 // --- CRUD ---
 
 export async function listTemplates() {
-  await requireAdmin();
+  await requireRole(["OWNER", "ADMIN"]);
   return prisma.template.findMany({
     orderBy: { createdAt: "desc" },
     select: {
@@ -71,7 +63,7 @@ export async function createTemplate(
   _prevState: TemplateFormState,
   formData: FormData
 ): Promise<TemplateFormState> {
-  await requireAdmin();
+  await requireRole(["OWNER", "ADMIN"]);
 
   const parsed = templateNameSchema.safeParse({
     name: formData.get("name"),
@@ -93,7 +85,7 @@ export async function updateTemplateName(
   _prevState: TemplateFormState,
   formData: FormData
 ): Promise<TemplateFormState> {
-  await requireAdmin();
+  await requireRole(["OWNER", "ADMIN"]);
 
   const parsed = templateNameSchema.safeParse({
     name: formData.get("name"),
@@ -114,7 +106,7 @@ export async function updateTemplateName(
 }
 
 export async function deleteTemplate(templateId: string) {
-  await requireAdmin();
+  await requireRole(["OWNER", "ADMIN"]);
 
   const template = await prisma.template.findUnique({
     where: { id: templateId },
@@ -147,7 +139,7 @@ const MAX_HEIGHT = 1200;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export async function uploadTemplateBg(templateId: string, formData: FormData) {
-  await requireAdmin();
+  await requireRole(["OWNER", "ADMIN"]);
 
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) {
@@ -200,7 +192,7 @@ export async function saveTemplateConfig(
   templateId: string,
   config: TemplateConfig
 ) {
-  await requireAdmin();
+  await requireRole(["OWNER", "ADMIN"]);
 
   const parsed = templateConfigSchema.safeParse(config);
   if (!parsed.success) {

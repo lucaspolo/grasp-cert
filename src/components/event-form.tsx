@@ -61,7 +61,8 @@ export function EventForm({
           <Input
             id="startDate"
             name="startDate"
-            type="datetime-local"
+            type="text"
+            placeholder="DD/MM/AAAA HH:mm"
             defaultValue={defaultValues?.startDate}
             required
           />
@@ -76,7 +77,8 @@ export function EventForm({
           <Input
             id="endDate"
             name="endDate"
-            type="datetime-local"
+            type="text"
+            placeholder="DD/MM/AAAA HH:mm"
             defaultValue={defaultValues?.endDate}
             required
           />

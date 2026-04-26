@@ -31,9 +31,9 @@ export default async function Home() {
       })
     : [];
 
-  // Query events where the user was the operator (admin who logged QSOs)
+  // Query events where the user was the operator
   const operatorQsos =
-    callsign && session?.user?.role === "ADMIN"
+    callsign && ["OWNER", "ADMIN", "OPERATOR"].includes(session?.user?.role ?? "")
       ? await prisma.qSO.findMany({
           where: { operatorCallsign: { equals: callsign, mode: "insensitive" } },
           include: {

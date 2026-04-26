@@ -26,9 +26,11 @@ type QSORow = {
 export function QSOTable({
   qsos,
   eventId,
+  showDelete = true,
 }: {
   qsos: QSORow[];
   eventId: string;
+  showDelete?: boolean;
 }) {
   return (
     <Table>
@@ -79,15 +81,17 @@ export function QSOTable({
               {qso.observations ?? "—"}
             </TableCell>
             <TableCell className="text-right">
-              <form
-                action={async () => {
-                  await deleteQSO(qso.id, eventId);
-                }}
-              >
-                <Button variant="destructive" size="sm" type="submit">
-                  Excluir
-                </Button>
-              </form>
+              {showDelete && (
+                <form
+                  action={async () => {
+                    await deleteQSO(qso.id, eventId);
+                  }}
+                >
+                  <Button variant="destructive" size="sm" type="submit">
+                    Excluir
+                  </Button>
+                </form>
+              )}
             </TableCell>
           </TableRow>
         ))}

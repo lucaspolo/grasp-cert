@@ -1,13 +1,12 @@
 import { getEvent, updateEvent } from "@/app/actions/event";
 import { listTemplates } from "@/app/actions/template";
+import { listEventOperators, listOperatorUsers } from "@/app/actions/user";
 import { EventForm } from "@/components/event-form";
+import { OperatorAssignment } from "@/components/operator-assignment";
+import { auth } from "@/auth";
 import { notFound } from "next/navigation";
-
-function toDatetimeLocal(date: Date) {
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16);
-}
+import type { AppRole } from "@/lib/auth-utils";
+import { formatBRDateTime } from "@/lib/utils";
 
 export default async function EditEventPage({
   params,
@@ -15,9 +14,14 @@ export default async function EditEventPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [event, templates] = await Promise.all([
+  const session = await auth();
+  const role = session?.user?.role as AppRole;
+
+  const [event, templates, operators, availableOperators] = await Promise.all([
     getEvent(id),
     listTemplates(),
+    listEventOperators(id),
+    listOperatorUsers(),
   ]);
 
   if (!event) notFound();
@@ -31,8 +35,8 @@ export default async function EditEventPage({
         action={boundUpdate}
         defaultValues={{
           name: event.name,
-          startDate: toDatetimeLocal(event.startDate),
-          endDate: toDatetimeLocal(event.endDate),
+          startDate: formatBRDateTime(event.startDate),
+          endDate: formatBRDateTime(event.endDate),
           modes: event.modes,
           bands: event.bands,
           observations: event.observations,
@@ -40,6 +44,24 @@ export default async function EditEventPage({
         }}
         templates={templates.map((t) => ({ id: t.id, name: t.name }))}
       />
+
+      {(role === "OWNER" || role === "ADMIN") && (
+        <div className="mt-8">
+          <OperatorAssignment
+            eventId={id}
+            assignedOperators={operators.map((o) => ({
+              userId: o.user.id,
+              callsign: o.user.callsign,
+              name: o.user.name,
+            }))}
+            availableOperators={availableOperators.map((u) => ({
+              id: u.id,
+              callsign: u.callsign,
+              name: u.name,
+            }))}
+          />
+        </div>
+      )}
     </div>
   );
 }

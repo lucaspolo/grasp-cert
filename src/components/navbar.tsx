@@ -1,12 +1,16 @@
 import { auth, signOut } from "@/auth";
 import Link from "next/link";
+import type { AppRole } from "@/lib/auth-utils";
 
 export async function Navbar() {
   const session = await auth();
 
   if (!session?.user) return null;
 
-  const isAdmin = session.user.role === "ADMIN";
+  const role = session.user.role as AppRole;
+  const isOwner = role === "OWNER";
+  const isOwnerOrAdmin = isOwner || role === "ADMIN";
+  const hasAdminAccess = isOwnerOrAdmin || role === "OPERATOR";
 
   return (
     <header className="border-b bg-background">
@@ -22,21 +26,29 @@ export async function Navbar() {
             >
               Meus Certificados
             </Link>
-            {isAdmin && (
-              <>
-                <Link
-                  href="/admin/events"
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  Eventos
-                </Link>
-                <Link
-                  href="/admin/templates"
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  Templates
-                </Link>
-              </>
+            {isOwner && (
+              <Link
+                href="/admin/users"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Usuários
+              </Link>
+            )}
+            {hasAdminAccess && (
+              <Link
+                href="/admin/events"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Eventos
+              </Link>
+            )}
+            {isOwnerOrAdmin && (
+              <Link
+                href="/admin/templates"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Templates
+              </Link>
             )}
           </nav>
         </div>

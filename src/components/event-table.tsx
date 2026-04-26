@@ -24,7 +24,7 @@ type EventRow = {
   _count: { qsos: number };
 };
 
-export function EventTable({ events }: { events: EventRow[] }) {
+export function EventTable({ events, showActions = true }: { events: EventRow[]; showActions?: boolean }) {
   return (
     <Table>
       <TableHeader>
@@ -89,20 +89,24 @@ export function EventTable({ events }: { events: EventRow[] }) {
                     QSOs
                   </Button>
                 </Link>
-                <Link href={`/admin/events/${event.id}/edit`}>
-                  <Button variant="outline" size="sm">
-                    Editar
-                  </Button>
-                </Link>
-                <form
-                  action={async () => {
-                    await deleteEvent(event.id);
-                  }}
-                >
-                  <Button variant="destructive" size="sm" type="submit">
-                    Excluir
-                  </Button>
-                </form>
+                {showActions && (
+                  <>
+                    <Link href={`/admin/events/${event.id}/edit`}>
+                      <Button variant="outline" size="sm">
+                        Editar
+                      </Button>
+                    </Link>
+                    <form
+                      action={async () => {
+                        await deleteEvent(event.id);
+                      }}
+                    >
+                      <Button variant="destructive" size="sm" type="submit">
+                        Excluir
+                      </Button>
+                    </form>
+                  </>
+                )}
               </div>
             </TableCell>
           </TableRow>

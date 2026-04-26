@@ -53,7 +53,8 @@ export function QSOForm({
           <Input
             id="dateTime"
             name="dateTime"
-            type="datetime-local"
+            type="text"
+            placeholder="DD/MM/AAAA HH:mm"
             required
           />
           {state.errors?.dateTime && (

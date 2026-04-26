@@ -3,8 +3,11 @@ import { listQSOsByEvent } from "@/app/actions/qso";
 import { QSOForm } from "@/components/qso-form";
 import { QSOTable } from "@/components/qso-table";
 import { Button } from "@/components/ui/button";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import type { AppRole } from "@/lib/auth-utils";
 
 export default async function QSOsPage({
   params,
@@ -12,11 +15,22 @@ export default async function QSOsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const event = await getEvent(id);
+  const session = await auth();
+  const role = session?.user?.role as AppRole;
 
+  // OPERATORs must be assigned to this event
+  if (role === "OPERATOR") {
+    const assignment = await prisma.eventOperator.findUnique({
+      where: { eventId_userId: { eventId: id, userId: session!.user.id } },
+    });
+    if (!assignment) redirect("/admin/events");
+  }
+
+  const event = await getEvent(id);
   if (!event) notFound();
 
   const qsos = await listQSOsByEvent(id);
+  const canDelete = role === "OWNER" || role === "ADMIN";
 
   return (
     <div>
@@ -36,7 +50,7 @@ export default async function QSOsPage({
       <QSOForm eventId={id} eventModes={event.modes} eventBands={event.bands} />
 
       <div className="mt-6">
-        <QSOTable qsos={qsos} eventId={id} />
+        <QSOTable qsos={qsos} eventId={id} showDelete={canDelete} />
       </div>
     </div>
   );

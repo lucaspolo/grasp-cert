@@ -20,7 +20,7 @@ async function main() {
       name: "Administrador",
       city: "São Paulo",
       state: "SP",
-      role: "ADMIN",
+      role: "OWNER",
       passwordHash,
     },
   });

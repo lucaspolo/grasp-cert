@@ -1,17 +1,10 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { requireRole, requireEventOperator } from "@/lib/auth-utils";
+import { parseBRDateTime } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
-    throw new Error("Unauthorized");
-  }
-  return session;
-}
 
 export type QSOFormState = {
   errors?: Record<string, string[]>;
@@ -24,9 +17,11 @@ const qsoSchema = z.object({
     .min(3, "Indicativo deve ter no mínimo 3 caracteres")
     .max(10)
     .transform((v) => v.toUpperCase().trim()),
-  dateTime: z.string().refine((v) => !isNaN(Date.parse(v)), {
-    message: "Data/hora inválida",
-  }),
+  dateTime: z
+    .string()
+    .min(1, "Data/hora é obrigatória")
+    .transform((v) => parseBRDateTime(v))
+    .refine((d): d is Date => d !== null, { message: "Data/hora inválida. Use DD/MM/AAAA HH:mm" }),
   frequency: z.string().min(1, "Frequência é obrigatória"),
   mode: z.string().min(1, "Modalidade é obrigatória"),
   rstSent: z.string().min(1, "RST enviado é obrigatório"),
@@ -39,7 +34,12 @@ export async function createQSO(
   _prevState: QSOFormState,
   formData: FormData
 ): Promise<QSOFormState> {
-  const session = await requireAdmin();
+  const session = await requireRole(["OWNER", "ADMIN", "OPERATOR"]);
+
+  // OPERATORs can only create QSOs for events they are assigned to
+  if (session.user.role === "OPERATOR") {
+    await requireEventOperator(eventId, session.user.id);
+  }
 
   const parsed = qsoSchema.safeParse({
     participantCallsign: formData.get("participantCallsign"),
@@ -63,7 +63,7 @@ export async function createQSO(
       eventId,
       participantCallsign,
       operatorCallsign: session.user.callsign ?? null,
-      dateTime: new Date(dateTime),
+      dateTime,
       frequency,
       mode,
       rstSent,
@@ -77,7 +77,7 @@ export async function createQSO(
 }
 
 export async function deleteQSO(qsoId: string, eventId: string) {
-  await requireAdmin();
+  await requireRole(["OWNER", "ADMIN"]);
 
   await prisma.qSO.delete({ where: { id: qsoId } });
 

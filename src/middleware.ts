@@ -4,6 +4,15 @@ import { NextResponse } from "next/server";
 
 const { auth } = NextAuth(authConfig);
 
+type AppRole = "OWNER" | "ADMIN" | "OPERATOR" | "USER";
+
+const ROUTE_ROLES: { pattern: RegExp; roles: AppRole[] }[] = [
+  { pattern: /^\/admin\/users/, roles: ["OWNER"] },
+  { pattern: /^\/admin\/templates/, roles: ["OWNER", "ADMIN"] },
+  { pattern: /^\/admin\/events/, roles: ["OWNER", "ADMIN", "OPERATOR"] },
+  { pattern: /^\/admin/, roles: ["OWNER", "ADMIN", "OPERATOR"] },
+];
+
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const { pathname } = req.nextUrl;
@@ -22,6 +31,17 @@ export default auth((req) => {
 
   if (!isLoggedIn) {
     return NextResponse.redirect(new URL("/login", req.nextUrl));
+  }
+
+  // Role-based route protection
+  const userRole = req.auth?.user?.role as AppRole | undefined;
+  for (const rule of ROUTE_ROLES) {
+    if (rule.pattern.test(pathname)) {
+      if (!userRole || !rule.roles.includes(userRole)) {
+        return NextResponse.redirect(new URL("/", req.nextUrl));
+      }
+      break;
+    }
   }
 
   return NextResponse.next();
