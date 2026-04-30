@@ -71,17 +71,16 @@ model QSO {
   operatorCallsign    String?  @map("operator_callsign")
   dateTime            DateTime @map("date_time")
   frequency           String
-  mode                String
-  bandId              String?  @map("band_id")
-  modeId              String?  @map("mode_id")
+  bandId              String   @map("band_id")
+  modeId              String   @map("mode_id")
   rstSent             String   @map("rst_sent")
   rstReceived         String   @map("rst_received")
   observations        String?
   createdAt           DateTime @default(now()) @map("created_at")
 
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  band  Band?  @relation(fields: [bandId], references: [id])
-  modeRef Mode? @relation(fields: [modeId], references: [id])
+  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  band    Band  @relation(fields: [bandId], references: [id])
+  modeRef Mode  @relation(fields: [modeId], references: [id])
 
   @@map("qsos")
 }

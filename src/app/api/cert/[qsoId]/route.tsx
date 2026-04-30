@@ -235,7 +235,7 @@ export async function GET(
             display: "flex",
           }}
         >
-          {qso.band?.label ?? qso.frequency} · {qso.modeRef?.label ?? qso.mode} · RST {qso.rstSent}/{qso.rstReceived}
+          {qso.band.label} · {qso.modeRef.label} · RST {qso.rstSent}/{qso.rstReceived}
         </span>
 
         {/* QSO datetime */}

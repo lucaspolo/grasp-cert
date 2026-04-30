@@ -25,7 +25,6 @@ const qsoSchema = z.object({
   bandId: z.string().min(1, "Banda é obrigatória"),
   modeId: z.string().min(1, "Modo é obrigatório"),
   frequency: z.string().optional(),
-  mode: z.string().optional(),
   rstSent: z.string().min(1, "RST enviado é obrigatório"),
   rstReceived: z.string().min(1, "RST recebido é obrigatório"),
   observations: z.string().optional(),
@@ -49,7 +48,6 @@ export async function createQSO(
     bandId: formData.get("bandId"),
     modeId: formData.get("modeId"),
     frequency: formData.get("frequency") || undefined,
-    mode: formData.get("mode") || undefined,
     rstSent: formData.get("rstSent"),
     rstReceived: formData.get("rstReceived"),
     observations: formData.get("observations"),
@@ -59,14 +57,29 @@ export async function createQSO(
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
-  const { participantCallsign, dateTime, bandId, modeId, rstSent, rstReceived, observations } =
+  const { participantCallsign, dateTime, bandId, modeId, frequency, rstSent, rstReceived, observations } =
     parsed.data;
 
-  // Resolve band and mode names for legacy fields
-  const [band, modeRecord] = await Promise.all([
-    prisma.band.findUnique({ where: { id: bandId } }),
-    prisma.mode.findUnique({ where: { id: modeId } }),
+  // Validate that bandId and modeId belong to this event
+  const [eventBand, eventMode] = await Promise.all([
+    prisma.eventBand.findUnique({
+      where: { eventId_bandId: { eventId, bandId } },
+    }),
+    prisma.eventMode.findUnique({
+      where: { eventId_modeId: { eventId, modeId } },
+    }),
   ]);
+
+  const fieldErrors: Record<string, string[]> = {};
+  if (!eventBand) {
+    fieldErrors.bandId = ["Banda não pertence a este evento"];
+  }
+  if (!eventMode) {
+    fieldErrors.modeId = ["Modo não pertence a este evento"];
+  }
+  if (Object.keys(fieldErrors).length > 0) {
+    return { errors: fieldErrors };
+  }
 
   await prisma.qSO.create({
     data: {
@@ -76,8 +89,7 @@ export async function createQSO(
       dateTime,
       bandId,
       modeId,
-      frequency: band?.name ?? "",
-      mode: modeRecord?.name ?? "",
+      frequency: frequency || "",
       rstSent,
       rstReceived,
       observations: observations || null,

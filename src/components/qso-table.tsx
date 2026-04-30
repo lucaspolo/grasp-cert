@@ -17,9 +17,8 @@ type QSORow = {
   operatorCallsign: string | null;
   dateTime: Date;
   frequency: string;
-  mode: string;
-  band: { id: string; name: string; label: string } | null;
-  modeRef: { id: string; name: string; label: string } | null;
+  band: { id: string; name: string; label: string };
+  modeRef: { id: string; name: string; label: string };
   rstSent: string;
   rstReceived: string;
   observations: string | null;
@@ -74,8 +73,8 @@ export function QSOTable({
                 timeStyle: "short",
               })}
             </TableCell>
-            <TableCell>{qso.band?.label ?? qso.frequency}</TableCell>
-            <TableCell>{qso.modeRef?.label ?? qso.mode}</TableCell>
+            <TableCell>{qso.band.label}</TableCell>
+            <TableCell>{qso.modeRef.label}</TableCell>
             <TableCell>
               {qso.rstSent}/{qso.rstReceived}
             </TableCell>

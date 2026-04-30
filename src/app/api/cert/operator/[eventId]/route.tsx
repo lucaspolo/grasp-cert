@@ -54,8 +54,8 @@ export async function GET(
   const modesSet = new Set<string>();
   const bandsSet = new Set<string>();
   for (const qso of qsos) {
-    modesSet.add(qso.modeRef?.label ?? qso.mode);
-    bandsSet.add(qso.band?.label ?? qso.frequency);
+    modesSet.add(qso.modeRef.label);
+    bandsSet.add(qso.band.label);
   }
   const modes = Array.from(modesSet).sort();
   const bands = Array.from(bandsSet).sort();

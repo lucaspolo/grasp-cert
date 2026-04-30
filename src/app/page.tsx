@@ -75,8 +75,8 @@ export default async function Home() {
   >();
   for (const qso of operatorQsos) {
     const existing = operatorGrouped.get(qso.eventId);
-    const modeName = qso.modeRef?.label ?? qso.mode;
-    const bandName = qso.band?.label ?? qso.frequency;
+    const modeName = qso.modeRef.label;
+    const bandName = qso.band.label;
     if (existing) {
       existing.qsoCount++;
       existing.modes.add(modeName);
@@ -137,8 +137,8 @@ export default async function Home() {
                             timeStyle: "short",
                           })}
                         </TableCell>
-                        <TableCell>{qso.band?.label ?? qso.frequency}</TableCell>
-                        <TableCell>{qso.modeRef?.label ?? qso.mode}</TableCell>
+                        <TableCell>{qso.band.label}</TableCell>
+                        <TableCell>{qso.modeRef.label}</TableCell>
                         <TableCell>
                           {qso.rstSent}/{qso.rstReceived}
                         </TableCell>
