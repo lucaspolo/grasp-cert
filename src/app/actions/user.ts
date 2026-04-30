@@ -25,6 +25,7 @@ export async function listUsers() {
       city: true,
       state: true,
       role: true,
+      emailVerified: true,
       createdAt: true,
     },
   });
@@ -122,4 +123,89 @@ export async function listOperatorUsers() {
     select: { id: true, callsign: true, name: true },
     orderBy: { callsign: "asc" },
   });
+}
+
+const updateUserSchema = z.object({
+  userId: z.string().uuid(),
+  callsign: z
+    .string()
+    .min(3, "Indicativo deve ter no mínimo 3 caracteres")
+    .max(10, "Indicativo deve ter no máximo 10 caracteres")
+    .transform((v) => v.toUpperCase().trim()),
+  name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres"),
+  email: z.string().email("E-mail inválido"),
+  city: z.string().min(2, "Cidade deve ter no mínimo 2 caracteres"),
+  state: z
+    .string()
+    .length(2, "Estado deve ter 2 caracteres (UF)")
+    .transform((v) => v.toUpperCase().trim()),
+});
+
+export async function updateUser(userId: string, data: {
+  callsign: string;
+  name: string;
+  email: string;
+  city: string;
+  state: string;
+}) {
+  await requireRole(["OWNER", "ADMIN"]);
+
+  const parsed = updateUserSchema.safeParse({ userId, ...data });
+  if (!parsed.success) {
+    const fieldErrors = parsed.error.flatten().fieldErrors;
+    const firstError = Object.values(fieldErrors).flat()[0];
+    return { error: firstError || "Dados inválidos." };
+  }
+
+  const { callsign, name, email, city, state } = parsed.data;
+
+  const currentUser = await prisma.user.findUnique({ where: { id: userId } });
+  if (!currentUser) {
+    return { error: "Usuário não encontrado." };
+  }
+
+  // Check callsign uniqueness if changed
+  if (callsign !== currentUser.callsign) {
+    const existing = await prisma.user.findUnique({ where: { callsign } });
+    if (existing) {
+      return { error: "Indicativo já cadastrado por outro usuário." };
+    }
+  }
+
+  // Check email uniqueness if changed
+  if (email !== currentUser.email) {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return { error: "E-mail já cadastrado por outro usuário." };
+    }
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { callsign, name, email, city, state },
+  });
+
+  revalidatePath("/admin/users");
+  return { success: true };
+}
+
+export async function verifyUserEmail(userId: string) {
+  await requireRole(["OWNER", "ADMIN"]);
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    return { error: "Usuário não encontrado." };
+  }
+
+  if (user.emailVerified) {
+    return { error: "E-mail já verificado." };
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { emailVerified: new Date() },
+  });
+
+  revalidatePath("/admin/users");
+  return { success: true };
 }
