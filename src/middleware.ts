@@ -22,6 +22,7 @@ export default auth((req) => {
     pathname.startsWith("/register") ||
     pathname.startsWith("/esqueci-minha-senha") ||
     pathname.startsWith("/nova-senha") ||
+    pathname.startsWith("/verificar-email") ||
     pathname.startsWith("/api/auth");
 
   if (isPublicRoute) {

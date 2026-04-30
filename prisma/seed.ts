@@ -22,6 +22,7 @@ async function main() {
       state: "SP",
       role: "OWNER",
       passwordHash,
+      emailVerified: new Date(),
     },
   });
 

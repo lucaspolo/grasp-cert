@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { hashSync } from "bcryptjs";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { generateEmailVerificationToken } from "@/lib/tokens";
+import { sendVerificationEmail } from "@/lib/mail";
 
 const registerSchema = z
   .object({
@@ -71,6 +73,9 @@ export async function registerUser(
   await prisma.user.create({
     data: { callsign, name, email, city, state, passwordHash },
   });
+
+  const verificationToken = await generateEmailVerificationToken(email);
+  await sendVerificationEmail(email, verificationToken.token);
 
   redirect("/login?registered=true");
 }

@@ -53,9 +53,12 @@ export async function Navbar() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">
+          <Link
+            href="/configuracoes"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
             {session.user.callsign}
-          </span>
+          </Link>
           <form
             action={async () => {
               "use server";

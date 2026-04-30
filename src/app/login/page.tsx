@@ -39,7 +39,11 @@ function LoginForm() {
     });
 
     if (result?.error) {
-      setError("Indicativo ou senha inválidos");
+      if (result.code === "EMAIL_NOT_VERIFIED") {
+        setError("E-mail não verificado. Verifique sua caixa de entrada para ativar sua conta.");
+      } else {
+        setError("Indicativo ou senha inválidos");
+      }
       setPending(false);
     } else {
       router.push("/");
@@ -59,7 +63,7 @@ function LoginForm() {
         <CardContent>
           {registered && (
             <p className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
-              Cadastro realizado com sucesso! Faça login.
+              Cadastro realizado com sucesso! Verifique seu e-mail para ativar sua conta.
             </p>
           )}
 

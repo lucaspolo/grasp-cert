@@ -21,3 +21,23 @@ export async function sendPasswordResetEmail(email: string, token: string) {
     `,
   });
 }
+
+export async function sendVerificationEmail(email: string, token: string) {
+  const verifyLink = `${process.env.NEXT_PUBLIC_APP_URL}/verificar-email?token=${token}`;
+
+  const from = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+
+  await resend.emails.send({
+    from,
+    to: email,
+    subject: "Confirme seu e-mail — GRASP Cert",
+    html: `
+      <h2>Confirmação de e-mail</h2>
+      <p>Obrigado por se cadastrar no GRASP Cert!</p>
+      <p>Clique no link abaixo para confirmar seu e-mail e ativar sua conta:</p>
+      <p><a href="${verifyLink}">${verifyLink}</a></p>
+      <p>Este link expira em 24 horas.</p>
+      <p>Se você não criou esta conta, ignore este e-mail.</p>
+    `,
+  });
+}

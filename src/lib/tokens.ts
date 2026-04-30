@@ -21,3 +21,24 @@ export async function generatePasswordResetToken(email: string) {
 
   return passwordResetToken;
 }
+
+export async function generateEmailVerificationToken(email: string) {
+  const token = uuidv4();
+  const expires = new Date(Date.now() + 24 * 3600 * 1000); // 24 hours
+
+  const existingToken = await prisma.emailVerificationToken.findFirst({
+    where: { email },
+  });
+
+  if (existingToken) {
+    await prisma.emailVerificationToken.delete({
+      where: { id: existingToken.id },
+    });
+  }
+
+  const verificationToken = await prisma.emailVerificationToken.create({
+    data: { email, token, expires },
+  });
+
+  return verificationToken;
+}
