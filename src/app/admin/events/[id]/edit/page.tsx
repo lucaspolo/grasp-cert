@@ -49,12 +49,12 @@ export default async function EditEventPage({
         <div className="mt-8">
           <OperatorAssignment
             eventId={id}
-            assignedOperators={operators.map((o) => ({
+            assignedOperators={operators.map((o: { user: { id: string; callsign: string; name: string } }) => ({
               userId: o.user.id,
               callsign: o.user.callsign,
               name: o.user.name,
             }))}
-            availableOperators={availableOperators.map((u) => ({
+            availableOperators={availableOperators.map((u: { id: string; callsign: string; name: string }) => ({
               id: u.id,
               callsign: u.callsign,
               name: u.name,
