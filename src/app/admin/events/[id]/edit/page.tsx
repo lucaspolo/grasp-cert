@@ -42,7 +42,7 @@ export default async function EditEventPage({
           observations: event.observations,
           templateId: event.templateId,
         }}
-        templates={templates.map((t) => ({ id: t.id, name: t.name }))}
+        templates={templates.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name }))}
       />
 
       {(role === "OWNER" || role === "ADMIN") && (
