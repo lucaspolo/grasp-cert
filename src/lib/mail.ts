@@ -5,8 +5,10 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function sendPasswordResetEmail(email: string, token: string) {
   const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/nova-senha?token=${token}`;
 
+  const from = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+
   await resend.emails.send({
-    from: "suporte@blog.lucaspolo.dev",
+    from,
     to: email,
     subject: "Redefinição de senha — GRASP Cert",
     html: `
