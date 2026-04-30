@@ -2,6 +2,7 @@ import { auth, signOut } from "@/auth";
 import Link from "next/link";
 import type { AppRole } from "@/lib/auth-utils";
 import { NavDropdown } from "./nav-dropdown";
+import { ThemeToggle } from "./theme-toggle";
 
 export async function Navbar() {
   const session = await auth();
@@ -55,7 +56,8 @@ export async function Navbar() {
             )}
           </nav>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
           <Link
             href="/configuracoes"
             className="text-sm text-muted-foreground hover:text-foreground"
