@@ -37,6 +37,8 @@ export async function GET(
           },
         },
       },
+      band: true,
+      modeRef: true,
     },
   });
 
@@ -48,12 +50,12 @@ export async function GET(
 
   const event = qsos[0].event;
 
-  // Collect unique modes and bands (frequency) operated
+  // Collect unique modes and bands operated
   const modesSet = new Set<string>();
   const bandsSet = new Set<string>();
   for (const qso of qsos) {
-    modesSet.add(qso.mode);
-    bandsSet.add(qso.frequency);
+    modesSet.add(qso.modeRef?.label ?? qso.mode);
+    bandsSet.add(qso.band?.label ?? qso.frequency);
   }
   const modes = Array.from(modesSet).sort();
   const bands = Array.from(bandsSet).sort();

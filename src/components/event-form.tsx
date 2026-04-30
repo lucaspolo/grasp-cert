@@ -11,8 +11,8 @@ type EventData = {
   name: string;
   startDate: string;
   endDate: string;
-  modes: string[];
-  bands: string[];
+  bandIds: string[];
+  modeIds: string[];
   observations: string | null;
   templateId: string | null;
 };
@@ -22,10 +22,24 @@ type TemplateOption = {
   name: string;
 };
 
+type BandOption = {
+  id: string;
+  name: string;
+  label: string;
+};
+
+type ModeOption = {
+  id: string;
+  name: string;
+  label: string;
+};
+
 export function EventForm({
   action,
   defaultValues,
   templates,
+  bands,
+  modes,
 }: {
   action: (
     prevState: EventFormState,
@@ -33,6 +47,8 @@ export function EventForm({
   ) => Promise<EventFormState>;
   defaultValues?: EventData;
   templates?: TemplateOption[];
+  bands: BandOption[];
+  modes: ModeOption[];
 }) {
   const [state, formAction, pending] = useActionState(action, {});
 
@@ -91,30 +107,44 @@ export function EventForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="modes">Modalidades (separadas por vírgula)</Label>
-        <Input
-          id="modes"
-          name="modes"
-          placeholder="SSB, CW, FT8"
-          defaultValue={defaultValues?.modes.join(", ")}
-          required
-        />
-        {state.errors?.modes && (
-          <p className="text-sm text-destructive">{state.errors.modes[0]}</p>
+        <Label>Bandas</Label>
+        <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto border rounded-md p-3">
+          {bands.map((band) => (
+            <label key={band.id} className="flex items-center gap-1.5 text-sm">
+              <input
+                type="checkbox"
+                name="bandIds"
+                value={band.id}
+                defaultChecked={defaultValues?.bandIds.includes(band.id)}
+                className="rounded"
+              />
+              {band.label}
+            </label>
+          ))}
+        </div>
+        {state.errors?.bandIds && (
+          <p className="text-sm text-destructive">{state.errors.bandIds[0]}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="bands">Faixas (separadas por vírgula)</Label>
-        <Input
-          id="bands"
-          name="bands"
-          placeholder="10m, 40m, 80m"
-          defaultValue={defaultValues?.bands.join(", ")}
-          required
-        />
-        {state.errors?.bands && (
-          <p className="text-sm text-destructive">{state.errors.bands[0]}</p>
+        <Label>Modos</Label>
+        <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto border rounded-md p-3">
+          {modes.map((mode) => (
+            <label key={mode.id} className="flex items-center gap-1.5 text-sm">
+              <input
+                type="checkbox"
+                name="modeIds"
+                value={mode.id}
+                defaultChecked={defaultValues?.modeIds.includes(mode.id)}
+                className="rounded"
+              />
+              {mode.label}
+            </label>
+          ))}
+        </div>
+        {state.errors?.modeIds && (
+          <p className="text-sm text-destructive">{state.errors.modeIds[0]}</p>
         )}
       </div>
 

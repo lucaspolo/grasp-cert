@@ -1,5 +1,7 @@
 import { getEvent, updateEvent } from "@/app/actions/event";
 import { listTemplates } from "@/app/actions/template";
+import { listBands } from "@/app/actions/band";
+import { listModes } from "@/app/actions/mode";
 import { listEventOperators, listOperatorUsers } from "@/app/actions/user";
 import { EventForm } from "@/components/event-form";
 import { OperatorAssignment } from "@/components/operator-assignment";
@@ -17,11 +19,13 @@ export default async function EditEventPage({
   const session = await auth();
   const role = session?.user?.role as AppRole;
 
-  const [event, templates, operators, availableOperators] = await Promise.all([
+  const [event, templates, operators, availableOperators, bands, modes] = await Promise.all([
     getEvent(id),
     listTemplates(),
     listEventOperators(id),
     listOperatorUsers(),
+    listBands(),
+    listModes(),
   ]);
 
   if (!event) notFound();
@@ -37,12 +41,14 @@ export default async function EditEventPage({
           name: event.name,
           startDate: formatBRDateTime(event.startDate),
           endDate: formatBRDateTime(event.endDate),
-          modes: event.modes,
-          bands: event.bands,
+          bandIds: event.eventBands.map((eb) => eb.bandId),
+          modeIds: event.eventModes.map((em) => em.modeId),
           observations: event.observations,
           templateId: event.templateId,
         }}
         templates={templates.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name }))}
+        bands={bands}
+        modes={modes}
       />
 
       {(role === "OWNER" || role === "ADMIN") && (

@@ -18,8 +18,8 @@ type EventRow = {
   name: string;
   startDate: Date;
   endDate: Date;
-  modes: string[];
-  bands: string[];
+  eventBands: { band: { id: string; name: string; label: string } }[];
+  eventModes: { mode: { id: string; name: string; label: string } }[];
   template: { id: string; name: string } | null;
   _count: { qsos: number };
 };
@@ -58,18 +58,18 @@ export function EventTable({ events, showActions = true }: { events: EventRow[];
             </TableCell>
             <TableCell>
               <div className="flex flex-wrap gap-1">
-                {event.modes.map((m) => (
-                  <Badge key={m} variant="secondary">
-                    {m}
+                {event.eventModes.map((em) => (
+                  <Badge key={em.mode.id} variant="secondary">
+                    {em.mode.label}
                   </Badge>
                 ))}
               </div>
             </TableCell>
             <TableCell>
               <div className="flex flex-wrap gap-1">
-                {event.bands.map((b) => (
-                  <Badge key={b} variant="outline">
-                    {b}
+                {event.eventBands.map((eb) => (
+                  <Badge key={eb.band.id} variant="outline">
+                    {eb.band.label}
                   </Badge>
                 ))}
               </div>

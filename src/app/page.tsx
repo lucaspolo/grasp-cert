@@ -26,7 +26,11 @@ export default async function Home() {
   const qsos = callsign
     ? await prisma.qSO.findMany({
         where: { participantCallsign: { equals: callsign, mode: "insensitive" } },
-        include: { event: { select: { id: true, name: true, startDate: true, endDate: true } } },
+        include: {
+          event: { select: { id: true, name: true, startDate: true, endDate: true } },
+          band: true,
+          modeRef: true,
+        },
         orderBy: { dateTime: "desc" },
       })
     : [];
@@ -38,6 +42,8 @@ export default async function Home() {
           where: { operatorCallsign: { equals: callsign, mode: "insensitive" } },
           include: {
             event: { select: { id: true, name: true, startDate: true, endDate: true } },
+            band: true,
+            modeRef: true,
           },
           orderBy: { dateTime: "desc" },
         })
@@ -69,16 +75,18 @@ export default async function Home() {
   >();
   for (const qso of operatorQsos) {
     const existing = operatorGrouped.get(qso.eventId);
+    const modeName = qso.modeRef?.label ?? qso.mode;
+    const bandName = qso.band?.label ?? qso.frequency;
     if (existing) {
       existing.qsoCount++;
-      existing.modes.add(qso.mode);
-      existing.bands.add(qso.frequency);
+      existing.modes.add(modeName);
+      existing.bands.add(bandName);
     } else {
       operatorGrouped.set(qso.eventId, {
         event: qso.event,
         qsoCount: 1,
-        modes: new Set([qso.mode]),
-        bands: new Set([qso.frequency]),
+        modes: new Set([modeName]),
+        bands: new Set([bandName]),
       });
     }
   }
@@ -113,7 +121,7 @@ export default async function Home() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Data/Hora</TableHead>
-                      <TableHead>Frequência</TableHead>
+                      <TableHead>Banda</TableHead>
                       <TableHead>Modo</TableHead>
                       <TableHead>RST S/R</TableHead>
                       <TableHead className="text-right">Certificado</TableHead>
@@ -129,8 +137,8 @@ export default async function Home() {
                             timeStyle: "short",
                           })}
                         </TableCell>
-                        <TableCell>{qso.frequency}</TableCell>
-                        <TableCell>{qso.mode}</TableCell>
+                        <TableCell>{qso.band?.label ?? qso.frequency}</TableCell>
+                        <TableCell>{qso.modeRef?.label ?? qso.mode}</TableCell>
                         <TableCell>
                           {qso.rstSent}/{qso.rstReceived}
                         </TableCell>

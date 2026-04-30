@@ -7,14 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+type BandOption = { id: string; name: string; label: string };
+type ModeOption = { id: string; name: string; label: string };
+
 export function QSOForm({
   eventId,
-  eventModes,
   eventBands,
+  eventModes,
 }: {
   eventId: string;
-  eventModes: string[];
-  eventBands: string[];
+  eventBands: BandOption[];
+  eventModes: ModeOption[];
 }) {
   const boundCreate = createQSO.bind(null, eventId);
   const [state, formAction, pending] = useActionState<QSOFormState, FormData>(
@@ -65,42 +68,44 @@ export function QSOForm({
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor="frequency">Frequência</Label>
-          <Input
-            id="frequency"
-            name="frequency"
-            placeholder="14.250"
-            list="freq-hints"
+          <Label htmlFor="bandId">Banda</Label>
+          <select
+            id="bandId"
+            name="bandId"
             required
-          />
-          <datalist id="freq-hints">
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
+          >
+            <option value="">Selecione...</option>
             {eventBands.map((b) => (
-              <option key={b} value={b} />
+              <option key={b.id} value={b.id}>
+                {b.label}
+              </option>
             ))}
-          </datalist>
-          {state.errors?.frequency && (
+          </select>
+          {state.errors?.bandId && (
             <p className="text-xs text-destructive">
-              {state.errors.frequency[0]}
+              {state.errors.bandId[0]}
             </p>
           )}
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor="mode">Modalidade</Label>
-          <Input
-            id="mode"
-            name="mode"
-            placeholder="SSB"
-            list="mode-hints"
+          <Label htmlFor="modeId">Modo</Label>
+          <select
+            id="modeId"
+            name="modeId"
             required
-          />
-          <datalist id="mode-hints">
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
+          >
+            <option value="">Selecione...</option>
             {eventModes.map((m) => (
-              <option key={m} value={m} />
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
             ))}
-          </datalist>
-          {state.errors?.mode && (
-            <p className="text-xs text-destructive">{state.errors.mode[0]}</p>
+          </select>
+          {state.errors?.modeId && (
+            <p className="text-xs text-destructive">{state.errors.modeId[0]}</p>
           )}
         </div>
 

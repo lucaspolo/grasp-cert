@@ -47,7 +47,11 @@ export default async function QSOsPage({
         </Link>
       </div>
 
-      <QSOForm eventId={id} eventModes={event.modes} eventBands={event.bands} />
+      <QSOForm
+        eventId={id}
+        eventBands={event.eventBands.map((eb) => eb.band)}
+        eventModes={event.eventModes.map((em) => em.mode)}
+      />
 
       <div className="mt-6">
         <QSOTable qsos={qsos} eventId={id} showDelete={canDelete} />

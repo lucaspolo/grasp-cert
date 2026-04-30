@@ -18,18 +18,8 @@ const eventSchema = z.object({
   name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres"),
   startDate: brDateTimeField("Data de início"),
   endDate: brDateTimeField("Data de fim"),
-  modes: z.string().transform((v) =>
-    v
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean)
-  ),
-  bands: z.string().transform((v) =>
-    v
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean)
-  ),
+  bandIds: z.array(z.string()).default([]),
+  modeIds: z.array(z.string()).default([]),
   observations: z.string().optional(),
   templateId: z.string().optional(),
 });
@@ -45,12 +35,15 @@ export async function createEvent(
 ): Promise<EventFormState> {
   await requireRole(["OWNER", "ADMIN"]);
 
+  const bandIds = formData.getAll("bandIds") as string[];
+  const modeIds = formData.getAll("modeIds") as string[];
+
   const parsed = eventSchema.safeParse({
     name: formData.get("name"),
     startDate: formData.get("startDate"),
     endDate: formData.get("endDate"),
-    modes: formData.get("modes"),
-    bands: formData.get("bands"),
+    bandIds,
+    modeIds,
     observations: formData.get("observations"),
     templateId: formData.get("templateId") || undefined,
   });
@@ -59,17 +52,21 @@ export async function createEvent(
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
-  const { name, startDate, endDate, modes, bands, observations, templateId } = parsed.data;
+  const { name, startDate, endDate, observations, templateId } = parsed.data;
 
   await prisma.event.create({
     data: {
       name,
       startDate,
       endDate,
-      modes,
-      bands,
       observations: observations || null,
       templateId: templateId || null,
+      eventBands: {
+        create: parsed.data.bandIds.map((bandId) => ({ bandId })),
+      },
+      eventModes: {
+        create: parsed.data.modeIds.map((modeId) => ({ modeId })),
+      },
     },
   });
 
@@ -84,12 +81,15 @@ export async function updateEvent(
 ): Promise<EventFormState> {
   await requireRole(["OWNER", "ADMIN"]);
 
+  const bandIds = formData.getAll("bandIds") as string[];
+  const modeIds = formData.getAll("modeIds") as string[];
+
   const parsed = eventSchema.safeParse({
     name: formData.get("name"),
     startDate: formData.get("startDate"),
     endDate: formData.get("endDate"),
-    modes: formData.get("modes"),
-    bands: formData.get("bands"),
+    bandIds,
+    modeIds,
     observations: formData.get("observations"),
     templateId: formData.get("templateId") || undefined,
   });
@@ -98,20 +98,28 @@ export async function updateEvent(
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
-  const { name, startDate, endDate, modes, bands, observations, templateId } = parsed.data;
+  const { name, startDate, endDate, observations, templateId } = parsed.data;
 
-  await prisma.event.update({
-    where: { id: eventId },
-    data: {
-      name,
-      startDate,
-      endDate,
-      modes,
-      bands,
-      observations: observations || null,
-      templateId: templateId || null,
-    },
-  });
+  await prisma.$transaction([
+    prisma.eventBand.deleteMany({ where: { eventId } }),
+    prisma.eventMode.deleteMany({ where: { eventId } }),
+    prisma.event.update({
+      where: { id: eventId },
+      data: {
+        name,
+        startDate,
+        endDate,
+        observations: observations || null,
+        templateId: templateId || null,
+        eventBands: {
+          create: parsed.data.bandIds.map((bandId) => ({ bandId })),
+        },
+        eventModes: {
+          create: parsed.data.modeIds.map((modeId) => ({ modeId })),
+        },
+      },
+    }),
+  ]);
 
   revalidatePath("/admin/events");
   redirect("/admin/events");
@@ -131,6 +139,8 @@ export async function listEvents() {
     include: {
       _count: { select: { qsos: true } },
       template: { select: { id: true, name: true } },
+      eventBands: { include: { band: true } },
+      eventModes: { include: { mode: true } },
     },
   });
 }
@@ -138,6 +148,10 @@ export async function listEvents() {
 export async function getEvent(id: string) {
   return prisma.event.findUnique({
     where: { id },
-    include: { template: { select: { id: true, name: true } } },
+    include: {
+      template: { select: { id: true, name: true } },
+      eventBands: { include: { band: true } },
+      eventModes: { include: { mode: true } },
+    },
   });
 }

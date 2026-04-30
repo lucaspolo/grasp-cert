@@ -1,9 +1,15 @@
 import { createEvent } from "@/app/actions/event";
 import { listTemplates } from "@/app/actions/template";
+import { listBands } from "@/app/actions/band";
+import { listModes } from "@/app/actions/mode";
 import { EventForm } from "@/components/event-form";
 
 export default async function NewEventPage() {
-  const templates = await listTemplates();
+  const [templates, bands, modes] = await Promise.all([
+    listTemplates(),
+    listBands(),
+    listModes(),
+  ]);
 
   return (
     <div>
@@ -11,6 +17,8 @@ export default async function NewEventPage() {
       <EventForm
         action={createEvent}
         templates={templates.map((t) => ({ id: t.id, name: t.name }))}
+        bands={bands}
+        modes={modes}
       />
     </div>
   );

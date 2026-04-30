@@ -18,6 +18,8 @@ type QSORow = {
   dateTime: Date;
   frequency: string;
   mode: string;
+  band: { id: string; name: string; label: string } | null;
+  modeRef: { id: string; name: string; label: string } | null;
   rstSent: string;
   rstReceived: string;
   observations: string | null;
@@ -39,7 +41,7 @@ export function QSOTable({
           <TableHead>Indicativo</TableHead>
           <TableHead>Operador</TableHead>
           <TableHead>Data/Hora</TableHead>
-          <TableHead>Frequência</TableHead>
+          <TableHead>Banda</TableHead>
           <TableHead>Modo</TableHead>
           <TableHead>RST S/R</TableHead>
           <TableHead>Obs</TableHead>
@@ -72,8 +74,8 @@ export function QSOTable({
                 timeStyle: "short",
               })}
             </TableCell>
-            <TableCell>{qso.frequency}</TableCell>
-            <TableCell>{qso.mode}</TableCell>
+            <TableCell>{qso.band?.label ?? qso.frequency}</TableCell>
+            <TableCell>{qso.modeRef?.label ?? qso.mode}</TableCell>
             <TableCell>
               {qso.rstSent}/{qso.rstReceived}
             </TableCell>

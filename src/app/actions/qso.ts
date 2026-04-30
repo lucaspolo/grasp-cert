@@ -22,8 +22,10 @@ const qsoSchema = z.object({
     .min(1, "Data/hora é obrigatória")
     .transform((v) => parseBRDateTime(v))
     .refine((d): d is Date => d !== null, { message: "Data/hora inválida. Use DD/MM/AAAA HH:mm" }),
-  frequency: z.string().min(1, "Frequência é obrigatória"),
-  mode: z.string().min(1, "Modalidade é obrigatória"),
+  bandId: z.string().min(1, "Banda é obrigatória"),
+  modeId: z.string().min(1, "Modo é obrigatório"),
+  frequency: z.string().optional(),
+  mode: z.string().optional(),
   rstSent: z.string().min(1, "RST enviado é obrigatório"),
   rstReceived: z.string().min(1, "RST recebido é obrigatório"),
   observations: z.string().optional(),
@@ -44,8 +46,10 @@ export async function createQSO(
   const parsed = qsoSchema.safeParse({
     participantCallsign: formData.get("participantCallsign"),
     dateTime: formData.get("dateTime"),
-    frequency: formData.get("frequency"),
-    mode: formData.get("mode"),
+    bandId: formData.get("bandId"),
+    modeId: formData.get("modeId"),
+    frequency: formData.get("frequency") || undefined,
+    mode: formData.get("mode") || undefined,
     rstSent: formData.get("rstSent"),
     rstReceived: formData.get("rstReceived"),
     observations: formData.get("observations"),
@@ -55,8 +59,14 @@ export async function createQSO(
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
-  const { participantCallsign, dateTime, frequency, mode, rstSent, rstReceived, observations } =
+  const { participantCallsign, dateTime, bandId, modeId, rstSent, rstReceived, observations } =
     parsed.data;
+
+  // Resolve band and mode names for legacy fields
+  const [band, modeRecord] = await Promise.all([
+    prisma.band.findUnique({ where: { id: bandId } }),
+    prisma.mode.findUnique({ where: { id: modeId } }),
+  ]);
 
   await prisma.qSO.create({
     data: {
@@ -64,8 +74,10 @@ export async function createQSO(
       participantCallsign,
       operatorCallsign: session.user.callsign ?? null,
       dateTime,
-      frequency,
-      mode,
+      bandId,
+      modeId,
+      frequency: band?.name ?? "",
+      mode: modeRecord?.name ?? "",
       rstSent,
       rstReceived,
       observations: observations || null,
@@ -88,5 +100,9 @@ export async function listQSOsByEvent(eventId: string) {
   return prisma.qSO.findMany({
     where: { eventId },
     orderBy: { dateTime: "desc" },
+    include: {
+      band: true,
+      modeRef: true,
+    },
   });
 }

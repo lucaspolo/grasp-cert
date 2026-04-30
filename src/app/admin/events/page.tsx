@@ -24,6 +24,8 @@ export default async function EventsPage() {
       include: {
         _count: { select: { qsos: true } },
         template: { select: { id: true, name: true } },
+        eventBands: { include: { band: true } },
+        eventModes: { include: { mode: true } },
       },
     });
   } else {

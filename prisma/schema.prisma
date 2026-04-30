@@ -50,8 +50,6 @@ model Event {
   name         String
   startDate    DateTime  @map("start_date")
   endDate      DateTime  @map("end_date")
-  modes        String[]
-  bands        String[]
   templateId   String?   @map("template_id")
   observations String?
   createdAt    DateTime  @default(now()) @map("created_at")
@@ -60,6 +58,8 @@ model Event {
   template  Template?       @relation(fields: [templateId], references: [id])
   qsos      QSO[]
   operators EventOperator[]
+  eventBands EventBand[]
+  eventModes EventMode[]
 
   @@map("events")
 }
@@ -72,12 +72,16 @@ model QSO {
   dateTime            DateTime @map("date_time")
   frequency           String
   mode                String
+  bandId              String?  @map("band_id")
+  modeId              String?  @map("mode_id")
   rstSent             String   @map("rst_sent")
   rstReceived         String   @map("rst_received")
   observations        String?
   createdAt           DateTime @default(now()) @map("created_at")
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  band  Band?  @relation(fields: [bandId], references: [id])
+  modeRef Mode? @relation(fields: [modeId], references: [id])
 
   @@map("qsos")
 }
@@ -113,4 +117,54 @@ model EmailVerificationToken {
 
   @@unique([email, token])
   @@map("email_verification_tokens")
+}
+
+model Band {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  label     String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  eventBands EventBand[]
+  qsos       QSO[]
+
+  @@map("bands")
+}
+
+model Mode {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  label     String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  eventModes EventMode[]
+  qsos       QSO[]
+
+  @@map("modes")
+}
+
+model EventBand {
+  id      String @id @default(uuid())
+  eventId String @map("event_id")
+  bandId  String @map("band_id")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  band  Band  @relation(fields: [bandId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, bandId])
+  @@map("event_bands")
+}
+
+model EventMode {
+  id      String @id @default(uuid())
+  eventId String @map("event_id")
+  modeId  String @map("mode_id")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  mode  Mode  @relation(fields: [modeId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, modeId])
+  @@map("event_modes")
 }
