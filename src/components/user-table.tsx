@@ -117,15 +117,16 @@ export function UserTable({ users }: { users: UserRow[] }) {
 
   return (
     <>
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Indicativo</TableHead>
             <TableHead>Nome</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Cidade/UF</TableHead>
+            <TableHead className="hidden md:table-cell">Email</TableHead>
+            <TableHead className="hidden lg:table-cell">Cidade/UF</TableHead>
             <TableHead>Cargo</TableHead>
-            <TableHead>E-mail verificado</TableHead>
+            <TableHead className="hidden md:table-cell">E-mail verificado</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -141,8 +142,8 @@ export function UserTable({ users }: { users: UserRow[] }) {
             <TableRow key={user.id}>
               <TableCell className="font-medium">{user.callsign}</TableCell>
               <TableCell>{user.name}</TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>
+              <TableCell className="hidden md:table-cell">{user.email}</TableCell>
+              <TableCell className="hidden lg:table-cell">
                 {user.city}/{user.state}
               </TableCell>
               <TableCell>
@@ -162,7 +163,7 @@ export function UserTable({ users }: { users: UserRow[] }) {
                   </SelectContent>
                 </Select>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
                 {user.emailVerified ? (
                   <Badge variant="default">Verificado</Badge>
                 ) : (
@@ -201,6 +202,7 @@ export function UserTable({ users }: { users: UserRow[] }) {
           ))}
         </TableBody>
       </Table>
+      </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-md">

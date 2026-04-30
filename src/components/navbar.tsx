@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { AppRole } from "@/lib/auth-utils";
 import { NavDropdown } from "./nav-dropdown";
 import { ThemeToggle } from "./theme-toggle";
+import { MobileNav } from "./mobile-nav";
 
 export async function Navbar() {
   const session = await auth();
@@ -21,7 +22,7 @@ export async function Navbar() {
           <Link href="/" className="font-semibold text-lg">
             GRASP Cert
           </Link>
-          <nav className="flex items-center gap-4 text-sm">
+          <nav className="hidden md:flex items-center gap-4 text-sm">
             <Link
               href="/"
               className="text-muted-foreground hover:text-foreground"
@@ -56,7 +57,7 @@ export async function Navbar() {
             )}
           </nav>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-3">
           <ThemeToggle />
           <Link
             href="/configuracoes"
@@ -78,6 +79,14 @@ export async function Navbar() {
             </button>
           </form>
         </div>
+        <MobileNav
+          callsign={session.user.callsign ?? ""}
+          role={role}
+          signOutAction={async () => {
+            "use server";
+            await signOut({ redirectTo: "/login" });
+          }}
+        />
       </div>
     </header>
   );

@@ -24,13 +24,14 @@ type TemplateRow = {
 
 export function TemplateTable({ templates }: { templates: TemplateRow[] }) {
   return (
+    <div className="overflow-x-auto">
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Nome</TableHead>
-          <TableHead>Imagem</TableHead>
+          <TableHead className="hidden md:table-cell">Imagem</TableHead>
           <TableHead>Eventos</TableHead>
-          <TableHead>Criado em</TableHead>
+          <TableHead className="hidden md:table-cell">Criado em</TableHead>
           <TableHead className="text-right">Ações</TableHead>
         </TableRow>
       </TableHeader>
@@ -45,7 +46,7 @@ export function TemplateTable({ templates }: { templates: TemplateRow[] }) {
         {templates.map((t) => (
           <TableRow key={t.id}>
             <TableCell className="font-medium">{t.name}</TableCell>
-            <TableCell>
+            <TableCell className="hidden md:table-cell">
               {t.bgMimeType ? (
                 <Badge variant="secondary">Sim</Badge>
               ) : (
@@ -53,7 +54,7 @@ export function TemplateTable({ templates }: { templates: TemplateRow[] }) {
               )}
             </TableCell>
             <TableCell>{t._count.events}</TableCell>
-            <TableCell>
+            <TableCell className="hidden md:table-cell">
               {new Date(t.createdAt).toLocaleDateString("pt-BR")}
             </TableCell>
             <TableCell className="text-right">
@@ -81,5 +82,6 @@ export function TemplateTable({ templates }: { templates: TemplateRow[] }) {
         ))}
       </TableBody>
     </Table>
+    </div>
   );
 }

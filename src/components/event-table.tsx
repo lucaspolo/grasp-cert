@@ -26,15 +26,16 @@ type EventRow = {
 
 export function EventTable({ events, showActions = true }: { events: EventRow[]; showActions?: boolean }) {
   return (
+    <div className="overflow-x-auto">
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Nome</TableHead>
           <TableHead>Início</TableHead>
-          <TableHead>Fim</TableHead>
-          <TableHead>Modalidades</TableHead>
-          <TableHead>Faixas</TableHead>
-          <TableHead>Template</TableHead>
+          <TableHead className="hidden md:table-cell">Fim</TableHead>
+          <TableHead className="hidden lg:table-cell">Modalidades</TableHead>
+          <TableHead className="hidden lg:table-cell">Faixas</TableHead>
+          <TableHead className="hidden md:table-cell">Template</TableHead>
           <TableHead>QSOs</TableHead>
           <TableHead className="text-right">Ações</TableHead>
         </TableRow>
@@ -53,10 +54,10 @@ export function EventTable({ events, showActions = true }: { events: EventRow[];
             <TableCell>
               {new Date(event.startDate).toLocaleDateString("pt-BR")}
             </TableCell>
-            <TableCell>
+            <TableCell className="hidden md:table-cell">
               {new Date(event.endDate).toLocaleDateString("pt-BR")}
             </TableCell>
-            <TableCell>
+            <TableCell className="hidden lg:table-cell">
               <div className="flex flex-wrap gap-1">
                 {event.eventModes.map((em) => (
                   <Badge key={em.mode.id} variant="secondary">
@@ -65,7 +66,7 @@ export function EventTable({ events, showActions = true }: { events: EventRow[];
                 ))}
               </div>
             </TableCell>
-            <TableCell>
+            <TableCell className="hidden lg:table-cell">
               <div className="flex flex-wrap gap-1">
                 {event.eventBands.map((eb) => (
                   <Badge key={eb.band.id} variant="outline">
@@ -74,7 +75,7 @@ export function EventTable({ events, showActions = true }: { events: EventRow[];
                 ))}
               </div>
             </TableCell>
-            <TableCell>
+            <TableCell className="hidden md:table-cell">
               {event.template ? (
                 <Badge variant="secondary">{event.template.name}</Badge>
               ) : (
@@ -113,5 +114,6 @@ export function EventTable({ events, showActions = true }: { events: EventRow[];
         ))}
       </TableBody>
     </Table>
+    </div>
   );
 }

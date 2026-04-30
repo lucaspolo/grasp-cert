@@ -122,8 +122,8 @@ export default async function Home() {
                     <TableRow>
                       <TableHead>Data/Hora</TableHead>
                       <TableHead>Banda</TableHead>
-                      <TableHead>Modo</TableHead>
-                      <TableHead>RST S/R</TableHead>
+                      <TableHead className="hidden md:table-cell">Modo</TableHead>
+                      <TableHead className="hidden md:table-cell">RST S/R</TableHead>
                       <TableHead className="text-right">Certificado</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -138,8 +138,8 @@ export default async function Home() {
                           })}
                         </TableCell>
                         <TableCell>{qso.band.label}</TableCell>
-                        <TableCell>{qso.modeRef.label}</TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">{qso.modeRef.label}</TableCell>
+                        <TableCell className="hidden md:table-cell">
                           {qso.rstSent}/{qso.rstReceived}
                         </TableCell>
                         <TableCell className="text-right">

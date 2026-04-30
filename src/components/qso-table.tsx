@@ -34,16 +34,17 @@ export function QSOTable({
   showDelete?: boolean;
 }) {
   return (
+    <div className="overflow-x-auto">
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Indicativo</TableHead>
-          <TableHead>Operador</TableHead>
+          <TableHead className="hidden md:table-cell">Operador</TableHead>
           <TableHead>Data/Hora</TableHead>
           <TableHead>Banda</TableHead>
           <TableHead>Modo</TableHead>
           <TableHead>RST S/R</TableHead>
-          <TableHead>Obs</TableHead>
+          <TableHead className="hidden md:table-cell">Obs</TableHead>
           <TableHead className="text-right">Ações</TableHead>
         </TableRow>
       </TableHeader>
@@ -63,7 +64,7 @@ export function QSOTable({
             <TableCell className="font-medium">
               {qso.participantCallsign}
             </TableCell>
-            <TableCell className="text-muted-foreground">
+            <TableCell className="hidden md:table-cell text-muted-foreground">
               {qso.operatorCallsign ?? "—"}
             </TableCell>
             <TableCell>
@@ -78,7 +79,7 @@ export function QSOTable({
             <TableCell>
               {qso.rstSent}/{qso.rstReceived}
             </TableCell>
-            <TableCell className="max-w-[200px] truncate">
+            <TableCell className="hidden md:table-cell max-w-[200px] truncate">
               {qso.observations ?? "—"}
             </TableCell>
             <TableCell className="text-right">
@@ -98,5 +99,6 @@ export function QSOTable({
         ))}
       </TableBody>
     </Table>
+    </div>
   );
 }
