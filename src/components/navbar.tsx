@@ -1,6 +1,7 @@
 import { auth, signOut } from "@/auth";
 import Link from "next/link";
 import type { AppRole } from "@/lib/auth-utils";
+import { NavDropdown } from "./nav-dropdown";
 
 export async function Navbar() {
   const session = await auth();
@@ -43,28 +44,14 @@ export async function Navbar() {
               </Link>
             )}
             {isOwnerOrAdmin && (
-              <Link
-                href="/admin/templates"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Templates
-              </Link>
-            )}
-            {isOwnerOrAdmin && (
-              <Link
-                href="/admin/bands"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Bandas
-              </Link>
-            )}
-            {isOwnerOrAdmin && (
-              <Link
-                href="/admin/modes"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Modos
-              </Link>
+              <NavDropdown
+                label="Configurações"
+                items={[
+                  { href: "/admin/templates", label: "Templates" },
+                  { href: "/admin/bands", label: "Bandas" },
+                  { href: "/admin/modes", label: "Modos" },
+                ]}
+              />
             )}
           </nav>
         </div>
