@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DateTimeInput } from "@/components/datetime-input";
 import type { EventFormState } from "@/app/actions/event";
 
 type EventData = {
@@ -74,11 +75,9 @@ export function EventForm({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="startDate">Data de Início</Label>
-          <Input
+          <DateTimeInput
             id="startDate"
             name="startDate"
-            type="text"
-            placeholder="DD/MM/AAAA HH:mm"
             defaultValue={defaultValues?.startDate}
             required
           />
@@ -90,11 +89,9 @@ export function EventForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="endDate">Data de Fim</Label>
-          <Input
+          <DateTimeInput
             id="endDate"
             name="endDate"
-            type="text"
-            placeholder="DD/MM/AAAA HH:mm"
             defaultValue={defaultValues?.endDate}
             required
           />

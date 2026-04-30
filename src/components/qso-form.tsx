@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DateTimeInput } from "@/components/datetime-input";
 
 type BandOption = { id: string; name: string; label: string };
 type ModeOption = { id: string; name: string; label: string };
@@ -53,11 +54,9 @@ export function QSOForm({
 
         <div className="space-y-1">
           <Label htmlFor="dateTime">Data/Hora (UTC)</Label>
-          <Input
+          <DateTimeInput
             id="dateTime"
             name="dateTime"
-            type="text"
-            placeholder="DD/MM/AAAA HH:mm"
             required
           />
           {state.errors?.dateTime && (
