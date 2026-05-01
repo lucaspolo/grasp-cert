@@ -4,6 +4,8 @@ import { auth } from "@/auth";
 import { NextRequest } from "next/server";
 import type { TemplateConfig } from "@/lib/template-config";
 import { getDefaultTemplateConfig } from "@/lib/template-config";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 export const runtime = "nodejs";
 
@@ -93,6 +95,18 @@ export async function GET(
 
   const hasCustomBg = !!bgDataUri;
 
+  // Load watermark logo for default certificates
+  let watermarkDataUri: string | null = null;
+  if (!hasCustomBg) {
+    try {
+      const logoPath = join(process.cwd(), "public", "logo_grasp.png");
+      const logoBuffer = readFileSync(logoPath);
+      watermarkDataUri = `data:image/png;base64,${logoBuffer.toString("base64")}`;
+    } catch {
+      // Logo not available — skip watermark
+    }
+  }
+
   return new ImageResponse(
     (
       <div
@@ -103,10 +117,27 @@ export async function GET(
           position: "relative",
           background: bgDataUri
             ? `url(${bgDataUri}) center/cover`
-            : "linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%)",
+            : "linear-gradient(135deg, #fef9c3 0%, #fef08a 100%)",
           fontFamily: "sans-serif",
         }}
       >
+        {/* Watermark logo — only when no custom background */}
+        {!hasCustomBg && watermarkDataUri && (
+          <img
+            src={watermarkDataUri}
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: 300,
+              height: 300,
+              objectFit: "contain",
+              opacity: 0.15,
+            }}
+          />
+        )}
+
         {/* Decorative border — only when no custom background */}
         {!hasCustomBg && (
           <div
@@ -116,7 +147,7 @@ export async function GET(
               left: 12,
               right: 12,
               bottom: 12,
-              border: "2px solid rgba(251, 191, 36, 0.4)",
+              border: "2px solid rgba(146, 64, 14, 0.3)",
               borderRadius: 12,
               display: "flex",
             }}
@@ -138,7 +169,7 @@ export async function GET(
             <span
               style={{
                 fontSize: 14,
-                color: "#fbbf24",
+                color: "#92400e",
                 letterSpacing: 4,
                 textTransform: "uppercase",
               }}
@@ -155,7 +186,7 @@ export async function GET(
             left: fields.eventName.x,
             top: fields.eventName.y,
             fontSize: fields.eventName.fontSize,
-            color: !hasCustomBg && fields.eventName.color === "#1a1a1a" ? "#e2e8f0" : fields.eventName.color,
+            color: !hasCustomBg && fields.eventName.color === "#1a1a1a" ? "#1a1a1a" : fields.eventName.color,
             fontWeight: 700,
             transform: "translateX(-50%)",
             textAlign: "center",
@@ -174,7 +205,7 @@ export async function GET(
             fontSize: fields.participantCallsign.fontSize,
             color:
               !hasCustomBg && fields.participantCallsign.color === "#0f172a"
-                ? "#fbbf24"
+                ? "#92400e"
                 : fields.participantCallsign.color,
             fontWeight: 700,
             transform: "translateX(-50%)",
@@ -193,7 +224,7 @@ export async function GET(
             fontSize: fields.participantName.fontSize,
             color:
               !hasCustomBg && fields.participantName.color === "#334155"
-                ? "#94a3b8"
+                ? "#334155"
                 : fields.participantName.color,
             transform: "translateX(-50%)",
             display: "flex",
@@ -211,7 +242,7 @@ export async function GET(
             fontSize: fields.eventDate.fontSize,
             color:
               !hasCustomBg && fields.eventDate.color === "#475569"
-                ? "#cbd5e1"
+                ? "#475569"
                 : fields.eventDate.color,
             transform: "translateX(-50%)",
             display: "flex",
@@ -229,7 +260,7 @@ export async function GET(
             fontSize: fields.qsoInfo.fontSize,
             color:
               !hasCustomBg && fields.qsoInfo.color === "#475569"
-                ? "#94a3b8"
+                ? "#475569"
                 : fields.qsoInfo.color,
             transform: "translateX(-50%)",
             display: "flex",
@@ -247,7 +278,7 @@ export async function GET(
             fontSize: fields.qsoDateTime.fontSize,
             color:
               !hasCustomBg && fields.qsoDateTime.color === "#475569"
-                ? "#94a3b8"
+                ? "#475569"
                 : fields.qsoDateTime.color,
             transform: "translateX(-50%)",
             display: "flex",
@@ -267,7 +298,7 @@ export async function GET(
             justifyContent: "center",
           }}
         >
-          <span style={{ fontSize: 12, color: hasCustomBg ? "#666" : "#64748b" }}>
+          <span style={{ fontSize: 12, color: hasCustomBg ? "#666" : "#78716c" }}>
             Gerado por GRASP-CERT
           </span>
         </div>
