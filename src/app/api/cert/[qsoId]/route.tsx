@@ -6,6 +6,7 @@ import type { TemplateConfig } from "@/lib/template-config";
 import { getDefaultTemplateConfig } from "@/lib/template-config";
 import { readFileSync } from "fs";
 import { join } from "path";
+import QRCode from "qrcode";
 
 export const runtime = "nodejs";
 
@@ -106,6 +107,17 @@ export async function GET(
       // Logo not available — skip watermark
     }
   }
+
+  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verificar-certificado/${qsoId}`;
+
+  const qrSvg = await QRCode.toString(verifyUrl, {
+    type: "svg",
+    width: 100,
+    margin: 1,
+    errorCorrectionLevel: "M",
+    color: { dark: "#000000", light: "#ffffff" },
+  });
+  const qrDataUrl = `data:image/svg+xml,${encodeURIComponent(qrSvg)}`;
 
   return new ImageResponse(
     (
@@ -287,19 +299,31 @@ export async function GET(
           QSO em {qsoDateStr} às {qsoTimeStr} UTC
         </span>
 
-        {/* Footer */}
+        {/* QR Code — bottom right */}
+        <img
+          src={qrDataUrl}
+          style={{
+            position: "absolute",
+            bottom: 12,
+            right: 12,
+            width: 100,
+            height: 100,
+          }}
+        />
+
+        {/* Footer — verification URL */}
         <div
           style={{
             position: "absolute",
-            bottom: 24,
+            bottom: 20,
             left: 0,
             right: 0,
             display: "flex",
             justifyContent: "center",
           }}
         >
-          <span style={{ fontSize: 12, color: hasCustomBg ? "#666" : "#78716c" }}>
-            Gerado por GRASP-CERT
+          <span style={{ fontSize: 10, color: hasCustomBg ? "#666" : "#78716c" }}>
+            {verifyUrl}
           </span>
         </div>
       </div>

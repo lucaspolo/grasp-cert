@@ -1,6 +1,5 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
 import { NextRequest } from "next/server";
 import type { TemplateConfig } from "@/lib/template-config";
 import { getDefaultTemplateConfig } from "@/lib/template-config";
@@ -12,21 +11,12 @@ export const runtime = "nodejs";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> }
+  { params }: { params: Promise<{ eventId: string; callsign: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  const { eventId, callsign } = await params;
+  const operatorCallsign = decodeURIComponent(callsign);
 
-  const { eventId } = await params;
-  const operatorCallsign = session.user.callsign;
-
-  if (!operatorCallsign) {
-    return new Response("Callsign not found in session", { status: 400 });
-  }
-
-  // Find all QSOs in this event where the current user was the operator
+  // Find all QSOs in this event where the user was the operator
   const qsos = await prisma.qSO.findMany({
     where: {
       eventId,
@@ -120,7 +110,7 @@ export async function GET(
 
   const qrSvg = await QRCode.toString(verifyUrl, {
     type: "svg",
-    width: 100,
+    width: 70,
     margin: 1,
     errorCorrectionLevel: "M",
     color: { dark: "#000000", light: "#ffffff" },

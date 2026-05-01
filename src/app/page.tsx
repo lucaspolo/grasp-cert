@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
+import { CopyLinkButton } from "@/components/copy-link-button";
 
 export default async function Home() {
   const session = await auth();
@@ -143,14 +144,26 @@ export default async function Home() {
                           {qso.rstSent}/{qso.rstReceived}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Link
-                            href={`/api/cert/${qso.id}`}
-                            target="_blank"
-                          >
-                            <Button variant="outline" size="sm">
-                              Download
-                            </Button>
-                          </Link>
+                          <div className="flex items-center justify-end gap-1">
+                            <Link
+                              href={`/verificar-certificado/${qso.id}`}
+                              target="_blank"
+                              className="text-xs text-muted-foreground hover:underline hidden sm:inline"
+                            >
+                              Verificar
+                            </Link>
+                            <CopyLinkButton
+                              url={`${process.env.NEXT_PUBLIC_APP_URL}/verificar-certificado/${qso.id}`}
+                            />
+                            <Link
+                              href={`/api/cert/${qso.id}`}
+                              target="_blank"
+                            >
+                              <Button variant="outline" size="sm">
+                                Download
+                              </Button>
+                            </Link>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -198,7 +211,7 @@ export default async function Home() {
                         {Array.from(bands).sort().join(", ")}
                       </p>
                     </div>
-                    <div className="mt-4">
+                    <div className="mt-4 flex items-center gap-2">
                       <Link
                         href={`/api/cert/operator/${event.id}`}
                         target="_blank"
@@ -207,6 +220,16 @@ export default async function Home() {
                           Download Certificado de Operador
                         </Button>
                       </Link>
+                      <Link
+                        href={`/verificar-certificado/operador/${event.id}/${encodeURIComponent(callsign!)}`}
+                        target="_blank"
+                        className="text-xs text-muted-foreground hover:underline"
+                      >
+                        Verificar
+                      </Link>
+                      <CopyLinkButton
+                        url={`${process.env.NEXT_PUBLIC_APP_URL}/verificar-certificado/operador/${event.id}/${encodeURIComponent(callsign!)}`}
+                      />
                     </div>
                   </CardContent>
                 </Card>
