@@ -20,6 +20,7 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
 
   const isPublicRoute =
+    pathname === "/" ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
     pathname.startsWith("/esqueci-minha-senha") ||

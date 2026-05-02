@@ -50,7 +50,7 @@ export function MobileNav({ callsign, role, signOutAction }: MobileNavProps) {
             </div>
 
             <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
-              <NavLink href="/" onClick={() => setOpen(false)}>
+              <NavLink href="/meus-certificados" onClick={() => setOpen(false)}>
                 Meus Certificados
               </NavLink>
               {isOwner && (

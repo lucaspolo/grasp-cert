@@ -8,7 +8,26 @@ import { MobileNav } from "./mobile-nav";
 export async function Navbar() {
   const session = await auth();
 
-  if (!session?.user) return null;
+  if (!session?.user) {
+    return (
+      <header className="border-b bg-background">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
+          <Link href="/" className="font-semibold text-lg">
+            GRASP Cert
+          </Link>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Link
+              href="/login"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              Entrar
+            </Link>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   const role = session.user.role as AppRole;
   const isOwner = role === "OWNER";
@@ -24,7 +43,7 @@ export async function Navbar() {
           </Link>
           <nav className="hidden md:flex items-center gap-4 text-sm">
             <Link
-              href="/"
+              href="/meus-certificados"
               className="text-muted-foreground hover:text-foreground"
             >
               Meus Certificados

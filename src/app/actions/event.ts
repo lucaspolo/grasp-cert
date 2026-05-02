@@ -155,3 +155,15 @@ export async function getEvent(id: string) {
     },
   });
 }
+
+export async function listPublicEvents() {
+  const now = new Date();
+  return prisma.event.findMany({
+    where: { endDate: { gte: now } },
+    orderBy: { startDate: "asc" },
+    include: {
+      eventBands: { include: { band: true } },
+      eventModes: { include: { mode: true } },
+    },
+  });
+}

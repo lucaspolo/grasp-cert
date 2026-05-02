@@ -1,6 +1,4 @@
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
-import { Button } from "@/components/ui/button";
+import { listPublicEvents } from "@/app/actions/event";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -9,235 +7,106 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import Link from "next/link";
-import { CopyLinkButton } from "@/components/copy-link-button";
+import { Calendar, Radio } from "lucide-react";
 
 export default async function Home() {
-  const session = await auth();
-  const callsign = session?.user?.callsign;
+  const events = await listPublicEvents();
+  const now = new Date();
 
-  const qsos = callsign
-    ? await prisma.qSO.findMany({
-        where: { participantCallsign: { equals: callsign, mode: "insensitive" } },
-        include: {
-          event: { select: { id: true, name: true, startDate: true, endDate: true } },
-          band: true,
-          modeRef: true,
-        },
-        orderBy: { dateTime: "desc" },
-      })
-    : [];
-
-  // Query events where the user was the operator
-  const operatorQsos =
-    callsign && ["OWNER", "ADMIN", "OPERATOR"].includes(session?.user?.role ?? "")
-      ? await prisma.qSO.findMany({
-          where: { operatorCallsign: { equals: callsign, mode: "insensitive" } },
-          include: {
-            event: { select: { id: true, name: true, startDate: true, endDate: true } },
-            band: true,
-            modeRef: true,
-          },
-          orderBy: { dateTime: "desc" },
-        })
-      : [];
-
-  // Group QSOs by event
-  const grouped = new Map<
-    string,
-    { event: { id: string; name: string; startDate: Date; endDate: Date }; qsos: typeof qsos }
-  >();
-  for (const qso of qsos) {
-    const existing = grouped.get(qso.eventId);
-    if (existing) {
-      existing.qsos.push(qso);
-    } else {
-      grouped.set(qso.eventId, { event: qso.event, qsos: [qso] });
-    }
-  }
-
-  // Group operator QSOs by event, collecting unique modes and bands
-  const operatorGrouped = new Map<
-    string,
-    {
-      event: { id: string; name: string; startDate: Date; endDate: Date };
-      qsoCount: number;
-      modes: Set<string>;
-      bands: Set<string>;
-    }
-  >();
-  for (const qso of operatorQsos) {
-    const existing = operatorGrouped.get(qso.eventId);
-    const modeName = qso.modeRef.label;
-    const bandName = qso.band.label;
-    if (existing) {
-      existing.qsoCount++;
-      existing.modes.add(modeName);
-      existing.bands.add(bandName);
-    } else {
-      operatorGrouped.set(qso.eventId, {
-        event: qso.event,
-        qsoCount: 1,
-        modes: new Set([modeName]),
-        bands: new Set([bandName]),
-      });
-    }
-  }
+  const happening = events.filter(
+    (e) => e.startDate <= now && e.endDate >= now
+  );
+  const upcoming = events.filter((e) => e.startDate > now);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="text-2xl font-bold">
-        Bem-vindo, {session?.user?.name ?? session?.user?.callsign}!
-      </h1>
-
-      {grouped.size === 0 ? (
-        <p className="mt-4 text-muted-foreground">
-          Você ainda não possui QSOs registrados. Quando um administrador
-          lançar seus contatos em um evento, eles aparecerão aqui.
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">GRASP Cert</h1>
+        <p className="mt-2 text-muted-foreground">
+          Certificados de participação em concursos de radioamadorismo
         </p>
-      ) : (
-        <div className="mt-6 space-y-6">
-          {Array.from(grouped.values()).map(({ event, qsos: eventQsos }) => (
-            <Card key={event.id}>
-              <CardHeader>
-                <CardTitle>{event.name}</CardTitle>
-                <CardDescription>
-                  {new Date(event.startDate).toLocaleDateString("pt-BR")} —{" "}
-                  {new Date(event.endDate).toLocaleDateString("pt-BR")} ·{" "}
-                  <Badge variant="secondary">
-                    {eventQsos.length} QSO{eventQsos.length !== 1 ? "s" : ""}
-                  </Badge>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data/Hora</TableHead>
-                      <TableHead>Banda</TableHead>
-                      <TableHead className="hidden md:table-cell">Modo</TableHead>
-                      <TableHead className="hidden md:table-cell">RST S/R</TableHead>
-                      <TableHead className="text-right">Certificado</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {eventQsos.map((qso) => (
-                      <TableRow key={qso.id}>
-                        <TableCell>
-                          {new Date(qso.dateTime).toLocaleString("pt-BR", {
-                            timeZone: "UTC",
-                            dateStyle: "short",
-                            timeStyle: "short",
-                          })}
-                        </TableCell>
-                        <TableCell>{qso.band.label}</TableCell>
-                        <TableCell className="hidden md:table-cell">{qso.modeRef.label}</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {qso.rstSent}/{qso.rstReceived}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Link
-                              href={`/verificar-certificado/${qso.id}`}
-                              target="_blank"
-                              className="text-xs text-muted-foreground hover:underline hidden sm:inline"
-                            >
-                              Verificar
-                            </Link>
-                            <CopyLinkButton
-                              url={`${process.env.NEXT_PUBLIC_APP_URL}/verificar-certificado/${qso.id}`}
-                            />
-                            <Link
-                              href={`/api/cert/${qso.id}`}
-                              target="_blank"
-                            >
-                              <Button variant="outline" size="sm">
-                                Download
-                              </Button>
-                            </Link>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      </div>
+
+      {happening.length > 0 && (
+        <section>
+          <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
+            <Radio className="h-5 w-5 text-green-500" />
+            Acontecendo agora
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {happening.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+        </section>
       )}
 
-      {operatorGrouped.size > 0 && (
-        <>
-          <h2 className="mt-10 text-xl font-bold">
-            Eventos que você operou
+      {upcoming.length > 0 && (
+        <section className={happening.length > 0 ? "mt-10" : ""}>
+          <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
+            <Calendar className="h-5 w-5 text-blue-500" />
+            Em breve
           </h2>
-          <div className="mt-4 space-y-6">
-            {Array.from(operatorGrouped.values()).map(
-              ({ event, qsoCount, modes, bands }) => (
-                <Card key={event.id}>
-                  <CardHeader>
-                    <CardTitle>{event.name}</CardTitle>
-                    <CardDescription>
-                      {new Date(event.startDate).toLocaleDateString("pt-BR")}{" "}
-                      —{" "}
-                      {new Date(event.endDate).toLocaleDateString("pt-BR")} ·{" "}
-                      <Badge variant="secondary">
-                        {qsoCount} QSO{qsoCount !== 1 ? "s" : ""} lançado
-                        {qsoCount !== 1 ? "s" : ""}
-                      </Badge>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                      <p>
-                        <span className="font-medium text-foreground">
-                          Modos:
-                        </span>{" "}
-                        {Array.from(modes).sort().join(", ")}
-                      </p>
-                      <p>
-                        <span className="font-medium text-foreground">
-                          Faixas:
-                        </span>{" "}
-                        {Array.from(bands).sort().join(", ")}
-                      </p>
-                    </div>
-                    <div className="mt-4 flex items-center gap-2">
-                      <Link
-                        href={`/api/cert/operator/${event.id}`}
-                        target="_blank"
-                      >
-                        <Button variant="outline" size="sm">
-                          Download Certificado de Operador
-                        </Button>
-                      </Link>
-                      <Link
-                        href={`/verificar-certificado/operador/${event.id}/${encodeURIComponent(callsign!)}`}
-                        target="_blank"
-                        className="text-xs text-muted-foreground hover:underline"
-                      >
-                        Verificar
-                      </Link>
-                      <CopyLinkButton
-                        url={`${process.env.NEXT_PUBLIC_APP_URL}/verificar-certificado/operador/${event.id}/${encodeURIComponent(callsign!)}`}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {upcoming.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
           </div>
-        </>
+        </section>
+      )}
+
+      {happening.length === 0 && upcoming.length === 0 && (
+        <p className="text-muted-foreground">
+          Nenhum evento programado no momento.
+        </p>
       )}
     </div>
+  );
+}
+
+function EventCard({
+  event,
+}: {
+  event: Awaited<ReturnType<typeof listPublicEvents>>[number];
+}) {
+  const formatDate = (d: Date) =>
+    new Date(d).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">{event.name}</CardTitle>
+        <CardDescription>
+          {formatDate(event.startDate)} — {formatDate(event.endDate)}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {event.eventBands.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {event.eventBands.map((eb) => (
+              <Badge key={eb.bandId} variant="secondary">
+                {eb.band.label}
+              </Badge>
+            ))}
+          </div>
+        )}
+        {event.eventModes.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {event.eventModes.map((em) => (
+              <Badge key={em.modeId} variant="outline">
+                {em.mode.label}
+              </Badge>
+            ))}
+          </div>
+        )}
+        {event.observations && (
+          <p className="text-sm text-muted-foreground">{event.observations}</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
