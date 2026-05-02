@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
+import { LocalDateTime } from "@/components/local-datetime";
 
 type EventRow = {
   id: string;
@@ -52,10 +53,10 @@ export function EventTable({ events, showActions = true }: { events: EventRow[];
           <TableRow key={event.id}>
             <TableCell className="font-medium">{event.name}</TableCell>
             <TableCell>
-              {new Date(event.startDate).toLocaleDateString("pt-BR")}
+              <LocalDateTime date={event.startDate} />
             </TableCell>
             <TableCell className="hidden md:table-cell">
-              {new Date(event.endDate).toLocaleDateString("pt-BR")}
+              <LocalDateTime date={event.endDate} />
             </TableCell>
             <TableCell className="hidden lg:table-cell">
               <div className="flex flex-wrap gap-1">

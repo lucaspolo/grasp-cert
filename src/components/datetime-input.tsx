@@ -37,8 +37,19 @@ export function DateTimeInput({
 
   useEffect(() => {
     if (defaultValue) {
-      setValue(defaultValue);
-      const parsed = parse(defaultValue, "dd/MM/yyyy HH:mm", new Date());
+      // If defaultValue is an ISO string, convert to local BR format
+      let displayValue = defaultValue;
+      if (/^\d{4}-\d{2}-\d{2}T/.test(defaultValue)) {
+        const d = new Date(defaultValue);
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const year = d.getFullYear();
+        const h = String(d.getHours()).padStart(2, "0");
+        const min = String(d.getMinutes()).padStart(2, "0");
+        displayValue = `${day}/${month}/${year} ${h}:${min}`;
+      }
+      setValue(displayValue);
+      const parsed = parse(displayValue, "dd/MM/yyyy HH:mm", new Date());
       if (isValid(parsed)) {
         setSelectedDate(parsed);
         setHours(format(parsed, "HH"));

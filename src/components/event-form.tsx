@@ -74,7 +74,7 @@ export function EventForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="startDate">Data de Início</Label>
+          <Label htmlFor="startDate">Data de Início <span className="text-xs text-muted-foreground font-normal">(horário local)</span></Label>
           <DateTimeInput
             id="startDate"
             name="startDate"
@@ -88,7 +88,7 @@ export function EventForm({
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="endDate">Data de Fim</Label>
+          <Label htmlFor="endDate">Data de Fim <span className="text-xs text-muted-foreground font-normal">(horário local)</span></Label>
           <DateTimeInput
             id="endDate"
             name="endDate"
@@ -102,6 +102,7 @@ export function EventForm({
           )}
         </div>
       </div>
+      <input type="hidden" name="timezone" value={Intl.DateTimeFormat().resolvedOptions().timeZone} />
 
       <div className="space-y-2">
         <Label>Bandas</Label>

@@ -8,7 +8,6 @@ import { OperatorAssignment } from "@/components/operator-assignment";
 import { auth } from "@/auth";
 import { notFound } from "next/navigation";
 import type { AppRole } from "@/lib/auth-utils";
-import { formatBRDateTime } from "@/lib/utils";
 
 export default async function EditEventPage({
   params,
@@ -39,10 +38,10 @@ export default async function EditEventPage({
         action={boundUpdate}
         defaultValues={{
           name: event.name,
-          startDate: formatBRDateTime(event.startDate),
-          endDate: formatBRDateTime(event.endDate),
-          bandIds: event.eventBands.map((eb) => eb.bandId),
+          startDate: event.startDate.toISOString(),
+          endDate: event.endDate.toISOString(),
           modeIds: event.eventModes.map((em) => em.modeId),
+          bandIds: event.eventBands.map((eb) => eb.bandId),
           observations: event.observations,
           templateId: event.templateId,
         }}

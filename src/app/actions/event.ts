@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireRole, requireEventOperator } from "@/lib/auth-utils";
-import { parseBRDateTime } from "@/lib/utils";
+import { parseBRDateTime, localToUTC } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -53,12 +53,13 @@ export async function createEvent(
   }
 
   const { name, startDate, endDate, observations, templateId } = parsed.data;
+  const timezone = (formData.get("timezone") as string) || "UTC";
 
   await prisma.event.create({
     data: {
       name,
-      startDate,
-      endDate,
+      startDate: localToUTC(startDate, timezone),
+      endDate: localToUTC(endDate, timezone),
       observations: observations || null,
       templateId: templateId || null,
       eventBands: {
@@ -71,6 +72,7 @@ export async function createEvent(
   });
 
   revalidatePath("/admin/events");
+  revalidatePath("/");
   redirect("/admin/events");
 }
 
@@ -99,6 +101,7 @@ export async function updateEvent(
   }
 
   const { name, startDate, endDate, observations, templateId } = parsed.data;
+  const timezone = (formData.get("timezone") as string) || "UTC";
 
   await prisma.$transaction([
     prisma.eventBand.deleteMany({ where: { eventId } }),
@@ -107,8 +110,8 @@ export async function updateEvent(
       where: { id: eventId },
       data: {
         name,
-        startDate,
-        endDate,
+        startDate: localToUTC(startDate, timezone),
+        endDate: localToUTC(endDate, timezone),
         observations: observations || null,
         templateId: templateId || null,
         eventBands: {
@@ -122,6 +125,7 @@ export async function updateEvent(
   ]);
 
   revalidatePath("/admin/events");
+  revalidatePath("/");
   redirect("/admin/events");
 }
 

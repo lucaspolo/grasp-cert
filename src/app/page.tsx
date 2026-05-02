@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { LocalDateTime } from "@/components/local-datetime";
 import { Calendar, Radio } from "lucide-react";
 
 export default async function Home() {
@@ -69,19 +70,12 @@ function EventCard({
 }: {
   event: Awaited<ReturnType<typeof listPublicEvents>>[number];
 }) {
-  const formatDate = (d: Date) =>
-    new Date(d).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">{event.name}</CardTitle>
         <CardDescription>
-          {formatDate(event.startDate)} — {formatDate(event.endDate)}
+          <LocalDateTime date={event.startDate} /> — <LocalDateTime date={event.endDate} />
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

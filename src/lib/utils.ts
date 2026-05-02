@@ -37,3 +37,49 @@ export function formatBRDateTime(date: Date): string {
   const minute = String(d.getMinutes()).padStart(2, "0");
   return `${day}/${month}/${year} ${hour}:${minute}`;
 }
+
+/**
+ * Convert a Date (interpreted as local time in the given timezone) to UTC.
+ * E.g., if date represents "2026-05-01 14:00" in "America/Sao_Paulo" (UTC-3),
+ * the result is a Date for "2026-05-01 17:00 UTC".
+ */
+export function localToUTC(date: Date, timezone: string): Date {
+  // Format the date parts in the target timezone to find its UTC offset
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  // Get what "now" looks like in that timezone to calculate offset
+  const localStr = formatter.format(date);
+  const localParsed = new Date(localStr);
+  const offsetMs = localParsed.getTime() - date.getTime();
+
+  return new Date(date.getTime() - offsetMs);
+}
+
+/**
+ * Convert a UTC Date to the equivalent local time in the given timezone,
+ * formatted as "DD/MM/YYYY HH:mm".
+ */
+export function formatBRDateTimeInTZ(date: Date, timezone: string): string {
+  const d = new Date(date);
+  const parts = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: timezone,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("day")}/${get("month")}/${get("year")} ${get("hour")}:${get("minute")}`;
+}
