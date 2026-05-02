@@ -111,8 +111,8 @@ export default async function MeusCertificados() {
               <CardHeader>
                 <CardTitle>{event.name}</CardTitle>
                 <CardDescription>
-                  <LocalDateTime date={event.startDate} /> —{" "}
-                  <LocalDateTime date={event.endDate} /> ·{" "}
+                  <LocalDateTime date={event.startDate} showTime /> —{" "}
+                  <LocalDateTime date={event.endDate} showTime /> ·{" "}
                   <Badge variant="secondary">
                     {eventQsos.length} QSO{eventQsos.length !== 1 ? "s" : ""}
                   </Badge>
@@ -188,9 +188,9 @@ export default async function MeusCertificados() {
                   <CardHeader>
                     <CardTitle>{event.name}</CardTitle>
                     <CardDescription>
-                      <LocalDateTime date={event.startDate} />{" "}
+                      <LocalDateTime date={event.startDate} showTime />{" "}
                       —{" "}
-                      <LocalDateTime date={event.endDate} /> ·{" "}
+                      <LocalDateTime date={event.endDate} showTime /> ·{" "}
                       <Badge variant="secondary">
                         {qsoCount} QSO{qsoCount !== 1 ? "s" : ""} lançado
                         {qsoCount !== 1 ? "s" : ""}

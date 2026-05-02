@@ -75,7 +75,7 @@ function EventCard({
       <CardHeader>
         <CardTitle className="text-lg">{event.name}</CardTitle>
         <CardDescription>
-          <LocalDateTime date={event.startDate} /> — <LocalDateTime date={event.endDate} />
+          <LocalDateTime date={event.startDate} showTime /> — <LocalDateTime date={event.endDate} showTime />
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

@@ -53,10 +53,10 @@ export function EventTable({ events, showActions = true }: { events: EventRow[];
           <TableRow key={event.id}>
             <TableCell className="font-medium">{event.name}</TableCell>
             <TableCell>
-              <LocalDateTime date={event.startDate} />
+              <LocalDateTime date={event.startDate} showTime />
             </TableCell>
             <TableCell className="hidden md:table-cell">
-              <LocalDateTime date={event.endDate} />
+              <LocalDateTime date={event.endDate} showTime />
             </TableCell>
             <TableCell className="hidden lg:table-cell">
               <div className="flex flex-wrap gap-1">

@@ -7,18 +7,28 @@ type LocalDateTimeProps = {
   showTime?: boolean;
 };
 
+function getUTCOffsetLabel(date: Date): string {
+  const offsetMin = date.getTimezoneOffset();
+  const sign = offsetMin <= 0 ? "+" : "-";
+  const absHours = Math.floor(Math.abs(offsetMin) / 60);
+  const absMinutes = Math.abs(offsetMin) % 60;
+  const h = String(absHours).padStart(2, "0");
+  if (absMinutes === 0) return `UTC${sign}${h}`;
+  const m = String(absMinutes).padStart(2, "0");
+  return `UTC${sign}${h}:${m}`;
+}
+
 export function LocalDateTime({ date, showTime = false }: LocalDateTimeProps) {
   const [formatted, setFormatted] = useState<string>("");
 
   useEffect(() => {
     const d = new Date(date);
     if (showTime) {
-      setFormatted(
-        d.toLocaleString("pt-BR", {
-          dateStyle: "short",
-          timeStyle: "short",
-        })
-      );
+      const dateTimeStr = d.toLocaleString("pt-BR", {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
+      setFormatted(`${dateTimeStr} (${getUTCOffsetLabel(d)})`);
     } else {
       setFormatted(d.toLocaleDateString("pt-BR"));
     }
@@ -30,7 +40,7 @@ export function LocalDateTime({ date, showTime = false }: LocalDateTimeProps) {
     if (showTime) {
       return (
         <time dateTime={d.toISOString()} suppressHydrationWarning>
-          {d.toLocaleString("pt-BR", { timeZone: "UTC", dateStyle: "short", timeStyle: "short" })}
+          {d.toLocaleString("pt-BR", { timeZone: "UTC", dateStyle: "short", timeStyle: "short" })} (UTC+00)
         </time>
       );
     }
