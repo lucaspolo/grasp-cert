@@ -139,6 +139,7 @@ export default async function VerificarCertificadoPage({
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b text-left text-gray-500">
+                  <th className="py-2 pr-4">Operador</th>
                   <th className="py-2 pr-4">Data/Hora</th>
                   <th className="py-2 pr-4">Banda</th>
                   <th className="py-2 pr-4">Modo</th>
@@ -150,6 +151,9 @@ export default async function VerificarCertificadoPage({
                 {qsos.map((qso) => (
                   <tr key={qso.id} className="border-b last:border-0">
                     <td className="py-2 pr-4 font-medium text-gray-900">
+                      {qso.operatorCallsign?.toUpperCase() ?? "—"}
+                    </td>
+                    <td className="py-2 pr-4 text-gray-900">
                       {qso.dateTime.toLocaleDateString("pt-BR")}{" "}
                       {qso.dateTime.toLocaleTimeString("pt-BR", {
                         hour: "2-digit",

@@ -11,23 +11,21 @@ export function ThemeToggle() {
 
   useEffect(() => setMounted(true), []);
 
-  if (!mounted) {
-    return <Button variant="ghost" size="icon" className="h-8 w-8" disabled />;
-  }
-
   return (
     <Button
       variant="ghost"
       size="icon"
       className="h-8 w-8"
+      disabled={!mounted}
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      title={theme === "dark" ? "Tema claro" : "Tema escuro"}
+      title={mounted ? (theme === "dark" ? "Tema claro" : "Tema escuro") : undefined}
+      suppressHydrationWarning
     >
-      {theme === "dark" ? (
+      {mounted && (theme === "dark" ? (
         <Sun className="h-4 w-4" />
       ) : (
         <Moon className="h-4 w-4" />
-      )}
+      ))}
     </Button>
   );
 }

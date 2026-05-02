@@ -144,6 +144,7 @@ export default async function MeusCertificados() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Operador</TableHead>
                       <TableHead>Data/Hora</TableHead>
                       <TableHead>Banda</TableHead>
                       <TableHead className="hidden md:table-cell">Modo</TableHead>
@@ -153,6 +154,9 @@ export default async function MeusCertificados() {
                   <TableBody>
                     {eventQsos.map((qso) => (
                       <TableRow key={qso.id}>
+                        <TableCell className="font-medium">
+                          {qso.operatorCallsign?.toUpperCase() ?? "\u2014"}
+                        </TableCell>
                         <TableCell>
                           {new Date(qso.dateTime).toLocaleString("pt-BR", {
                             timeZone: "UTC",
