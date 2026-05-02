@@ -1,13 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
-export default async function VerificarCertificadoOperadorPage({
+export default async function VerificarCertificadoPage({
   params,
 }: {
-  params: Promise<{ eventId: string; callsign: string }>;
+  params: Promise<{ id: string; callsign: string }>;
 }) {
-  const { eventId, callsign } = await params;
-  const operatorCallsign = decodeURIComponent(callsign);
+  const { id: eventId, callsign } = await params;
+  const participantCallsign = decodeURIComponent(callsign);
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -20,7 +20,7 @@ export default async function VerificarCertificadoOperadorPage({
   const qsos = await prisma.qSO.findMany({
     where: {
       eventId,
-      operatorCallsign: { equals: operatorCallsign, mode: "insensitive" },
+      participantCallsign: { equals: participantCallsign, mode: "insensitive" },
     },
     include: {
       band: true,
@@ -33,9 +33,9 @@ export default async function VerificarCertificadoOperadorPage({
     notFound();
   }
 
-  const operator = await prisma.user.findFirst({
+  const participant = await prisma.user.findFirst({
     where: {
-      callsign: { equals: operatorCallsign, mode: "insensitive" },
+      callsign: { equals: participantCallsign, mode: "insensitive" },
     },
     select: { name: true },
   });
@@ -79,8 +79,8 @@ export default async function VerificarCertificadoOperadorPage({
         {/* Certificate image */}
         <div className="p-4">
           <img
-            src={`/api/verificar-certificado/operador/${eventId}/${encodeURIComponent(operatorCallsign)}`}
-            alt="Certificado de Operador"
+            src={`/api/verificar-certificado/${eventId}/${encodeURIComponent(participantCallsign)}`}
+            alt="Certificado de Participação"
             className="w-full rounded border"
           />
         </div>
@@ -102,15 +102,15 @@ export default async function VerificarCertificadoOperadorPage({
               </dd>
             </div>
             <div>
-              <dt className="text-gray-500">Indicativo do Operador</dt>
+              <dt className="text-gray-500">Indicativo</dt>
               <dd className="font-medium text-gray-900">
-                {operatorCallsign.toUpperCase()}
+                {participantCallsign.toUpperCase()}
               </dd>
             </div>
             <div>
               <dt className="text-gray-500">Nome</dt>
               <dd className="font-medium text-gray-900">
-                {operator?.name ?? operatorCallsign}
+                {participant?.name ?? participantCallsign}
               </dd>
             </div>
             <div>
@@ -139,20 +139,17 @@ export default async function VerificarCertificadoOperadorPage({
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b text-left text-gray-500">
-                  <th className="py-2 pr-4">Participante</th>
                   <th className="py-2 pr-4">Data/Hora</th>
                   <th className="py-2 pr-4">Banda</th>
                   <th className="py-2 pr-4">Modo</th>
-                  <th className="py-2">RST E/R</th>
+                  <th className="py-2 pr-4">RST Enviado</th>
+                  <th className="py-2">RST Recebido</th>
                 </tr>
               </thead>
               <tbody>
                 {qsos.map((qso) => (
                   <tr key={qso.id} className="border-b last:border-0">
                     <td className="py-2 pr-4 font-medium text-gray-900">
-                      {qso.participantCallsign.toUpperCase()}
-                    </td>
-                    <td className="py-2 pr-4 text-gray-900">
                       {qso.dateTime.toLocaleDateString("pt-BR")}{" "}
                       {qso.dateTime.toLocaleTimeString("pt-BR", {
                         hour: "2-digit",
@@ -163,9 +160,8 @@ export default async function VerificarCertificadoOperadorPage({
                     </td>
                     <td className="py-2 pr-4 text-gray-900">{qso.band.label}</td>
                     <td className="py-2 pr-4 text-gray-900">{qso.modeRef.label}</td>
-                    <td className="py-2 text-gray-900">
-                      {qso.rstSent}/{qso.rstReceived}
-                    </td>
+                    <td className="py-2 pr-4 text-gray-900">{qso.rstSent}</td>
+                    <td className="py-2 text-gray-900">{qso.rstReceived}</td>
                   </tr>
                 ))}
               </tbody>

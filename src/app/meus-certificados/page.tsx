@@ -51,17 +51,29 @@ export default async function MeusCertificados() {
         })
       : [];
 
-  // Group QSOs by event
+  // Group QSOs by event, collecting unique modes and bands
   const grouped = new Map<
     string,
-    { event: { id: string; name: string; startDate: Date; endDate: Date }; qsos: typeof qsos }
+    {
+      event: { id: string; name: string; startDate: Date; endDate: Date };
+      qsos: typeof qsos;
+      modes: Set<string>;
+      bands: Set<string>;
+    }
   >();
   for (const qso of qsos) {
     const existing = grouped.get(qso.eventId);
     if (existing) {
       existing.qsos.push(qso);
+      existing.modes.add(qso.modeRef.label);
+      existing.bands.add(qso.band.label);
     } else {
-      grouped.set(qso.eventId, { event: qso.event, qsos: [qso] });
+      grouped.set(qso.eventId, {
+        event: qso.event,
+        qsos: [qso],
+        modes: new Set([qso.modeRef.label]),
+        bands: new Set([qso.band.label]),
+      });
     }
   }
 
@@ -106,7 +118,7 @@ export default async function MeusCertificados() {
         </p>
       ) : (
         <div className="mt-6 space-y-6">
-          {Array.from(grouped.values()).map(({ event, qsos: eventQsos }) => (
+          {Array.from(grouped.values()).map(({ event, qsos: eventQsos, modes, bands }) => (
             <Card key={event.id}>
               <CardHeader>
                 <CardTitle>{event.name}</CardTitle>
@@ -119,6 +131,16 @@ export default async function MeusCertificados() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                <div className="flex flex-col gap-2 text-sm text-muted-foreground mb-4">
+                  <p>
+                    <span className="font-medium text-foreground">Modos:</span>{" "}
+                    {Array.from(modes).sort().join(", ")}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">Faixas:</span>{" "}
+                    {Array.from(bands).sort().join(", ")}
+                  </p>
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -126,7 +148,6 @@ export default async function MeusCertificados() {
                       <TableHead>Banda</TableHead>
                       <TableHead className="hidden md:table-cell">Modo</TableHead>
                       <TableHead className="hidden md:table-cell">RST S/R</TableHead>
-                      <TableHead className="text-right">Certificado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -144,32 +165,30 @@ export default async function MeusCertificados() {
                         <TableCell className="hidden md:table-cell">
                           {qso.rstSent}/{qso.rstReceived}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Link
-                              href={`/verificar-certificado/${qso.id}`}
-                              target="_blank"
-                              className="text-xs text-muted-foreground hover:underline hidden sm:inline"
-                            >
-                              Verificar
-                            </Link>
-                            <CopyLinkButton
-                              url={`${process.env.NEXT_PUBLIC_APP_URL}/verificar-certificado/${qso.id}`}
-                            />
-                            <Link
-                              href={`/api/cert/${qso.id}`}
-                              target="_blank"
-                            >
-                              <Button variant="outline" size="sm">
-                                Download
-                              </Button>
-                            </Link>
-                          </div>
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+                <div className="mt-4 flex items-center gap-2">
+                  <Link
+                    href={`/api/cert/${event.id}/${encodeURIComponent(callsign!)}`}
+                    target="_blank"
+                  >
+                    <Button variant="outline" size="sm">
+                      Download Certificado
+                    </Button>
+                  </Link>
+                  <Link
+                    href={`/verificar-certificado/${event.id}/${encodeURIComponent(callsign!)}`}
+                    target="_blank"
+                    className="text-xs text-muted-foreground hover:underline"
+                  >
+                    Verificar
+                  </Link>
+                  <CopyLinkButton
+                    url={`${process.env.NEXT_PUBLIC_APP_URL}/verificar-certificado/${event.id}/${encodeURIComponent(callsign!)}`}
+                  />
+                </div>
               </CardContent>
             </Card>
           ))}

@@ -1,6 +1,5 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
 import { NextRequest } from "next/server";
 import type { TemplateConfig } from "@/lib/template-config";
 import { getDefaultTemplateConfig } from "@/lib/template-config";
@@ -12,17 +11,17 @@ export const runtime = "nodejs";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: Promise<{ qsoId: string }> }
+  { params }: { params: Promise<{ id: string; callsign: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  const { id: eventId, callsign } = await params;
+  const participantCallsign = decodeURIComponent(callsign);
 
-  const { qsoId } = await params;
-
-  const qso = await prisma.qSO.findUnique({
-    where: { id: qsoId },
+  // Find all QSOs in this event for this participant
+  const qsos = await prisma.qSO.findMany({
+    where: {
+      eventId,
+      participantCallsign: { equals: participantCallsign, mode: "insensitive" },
+    },
     include: {
       event: {
         include: {
@@ -36,23 +35,29 @@ export async function GET(
     },
   });
 
-  if (!qso) {
-    return new Response("QSO not found", { status: 404 });
+  if (qsos.length === 0) {
+    return new Response("No QSOs found for this participant in this event", {
+      status: 404,
+    });
   }
 
-  // Auth check: admin can generate any, user can only generate their own
-  if (
-    session.user.role !== "ADMIN" &&
-    qso.participantCallsign.toUpperCase() !== session.user.callsign?.toUpperCase()
-  ) {
-    return new Response("Forbidden", { status: 403 });
+  const event = qsos[0].event;
+
+  // Collect unique modes and bands
+  const modesSet = new Set<string>();
+  const bandsSet = new Set<string>();
+  for (const qso of qsos) {
+    modesSet.add(qso.modeRef.label);
+    bandsSet.add(qso.band.label);
   }
+  const modes = Array.from(modesSet).sort();
+  const bands = Array.from(bandsSet).sort();
 
   // Resolve template: event's template > default "Padrão" template > code fallback
   let templateConfig: TemplateConfig | null = null;
   let bgDataUri: string | null = null;
 
-  const template = qso.event.template;
+  const template = event.template;
   if (template) {
     templateConfig = template.config as TemplateConfig | null;
     if (template.bgImage && template.bgMimeType) {
@@ -60,7 +65,6 @@ export async function GET(
       bgDataUri = `data:${template.bgMimeType};base64,${b64}`;
     }
   } else {
-    // Fallback: try to load the seeded "Padrão" template
     const defaultTemplate = await prisma.template.findFirst({
       where: { name: "Padrão" },
       select: { config: true, bgImage: true, bgMimeType: true },
@@ -76,23 +80,17 @@ export async function GET(
 
   const config: TemplateConfig = templateConfig ?? getDefaultTemplateConfig();
 
-  // Lookup participant name from users table (may not exist)
+  // Lookup participant name from users table
   const participant = await prisma.user.findFirst({
     where: {
-      callsign: { equals: qso.participantCallsign, mode: "insensitive" },
+      callsign: { equals: participantCallsign, mode: "insensitive" },
     },
     select: { name: true },
   });
 
   const fields = config.fields;
-  const eventStartStr = qso.event.startDate.toLocaleDateString("pt-BR");
-  const eventEndStr = qso.event.endDate.toLocaleDateString("pt-BR");
-  const qsoDateStr = qso.dateTime.toLocaleDateString("pt-BR");
-  const qsoTimeStr = qso.dateTime.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "UTC",
-  });
+  const eventStartStr = event.startDate.toLocaleDateString("pt-BR");
+  const eventEndStr = event.endDate.toLocaleDateString("pt-BR");
 
   const hasCustomBg = !!bgDataUri;
 
@@ -108,7 +106,7 @@ export async function GET(
     }
   }
 
-  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verificar-certificado/${qsoId}`;
+  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verificar-certificado/${eventId}/${encodeURIComponent(participantCallsign)}`;
 
   const qrSvg = await QRCode.toString(verifyUrl, {
     type: "svg",
@@ -198,14 +196,17 @@ export async function GET(
             left: fields.eventName.x,
             top: fields.eventName.y,
             fontSize: fields.eventName.fontSize,
-            color: !hasCustomBg && fields.eventName.color === "#1a1a1a" ? "#1a1a1a" : fields.eventName.color,
+            color:
+              !hasCustomBg && fields.eventName.color === "#1a1a1a"
+                ? "#1a1a1a"
+                : fields.eventName.color,
             fontWeight: 700,
             transform: "translateX(-50%)",
             textAlign: "center",
             display: "flex",
           }}
         >
-          {qso.event.name}
+          {event.name}
         </span>
 
         {/* Participant callsign */}
@@ -224,7 +225,7 @@ export async function GET(
             display: "flex",
           }}
         >
-          {qso.participantCallsign.toUpperCase()}
+          {participantCallsign.toUpperCase()}
         </span>
 
         {/* Participant name */}
@@ -242,7 +243,7 @@ export async function GET(
             display: "flex",
           }}
         >
-          {participant?.name ?? qso.participantCallsign}
+          {participant?.name ?? participantCallsign}
         </span>
 
         {/* Event date range */}
@@ -263,7 +264,7 @@ export async function GET(
           {eventStartStr} — {eventEndStr}
         </span>
 
-        {/* QSO info: frequency, mode, RST */}
+        {/* Modes and bands */}
         <span
           style={{
             position: "absolute",
@@ -278,10 +279,10 @@ export async function GET(
             display: "flex",
           }}
         >
-          {qso.band.label} · {qso.modeRef.label} · RST {qso.rstSent}/{qso.rstReceived}
+          Modos: {modes.join(", ")} · Faixas: {bands.join(", ")}
         </span>
 
-        {/* QSO datetime */}
+        {/* QSO count */}
         <span
           style={{
             position: "absolute",
@@ -296,7 +297,8 @@ export async function GET(
             display: "flex",
           }}
         >
-          QSO em {qsoDateStr} às {qsoTimeStr} UTC
+          Participante · {qsos.length} QSO{qsos.length !== 1 ? "s" : ""}{" "}
+          realizado{qsos.length !== 1 ? "s" : ""}
         </span>
 
         {/* QR Code — bottom right */}
@@ -322,7 +324,12 @@ export async function GET(
             justifyContent: "center",
           }}
         >
-          <span style={{ fontSize: 10, color: hasCustomBg ? "#666" : "#78716c" }}>
+          <span
+            style={{
+              fontSize: 10,
+              color: hasCustomBg ? "#666" : "#78716c",
+            }}
+          >
             {verifyUrl}
           </span>
         </div>
