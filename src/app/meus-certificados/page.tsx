@@ -162,7 +162,7 @@ export default async function MeusCertificados() {
                             timeZone: "UTC",
                             dateStyle: "short",
                             timeStyle: "short",
-                          })}
+                          })}{" "}UTC
                         </TableCell>
                         <TableCell>{qso.band.label}</TableCell>
                         <TableCell className="hidden md:table-cell">{qso.modeRef.label}</TableCell>

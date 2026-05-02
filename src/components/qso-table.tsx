@@ -72,7 +72,7 @@ export function QSOTable({
                 timeZone: "UTC",
                 dateStyle: "short",
                 timeStyle: "short",
-              })}
+              })}{" "}UTC
             </TableCell>
             <TableCell>{qso.band.label}</TableCell>
             <TableCell>{qso.modeRef.label}</TableCell>
