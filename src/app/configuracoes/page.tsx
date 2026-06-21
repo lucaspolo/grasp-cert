@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { TwoFactorSettings } from "@/components/two-factor-settings";
 
 const initialState: ProfileState = {};
 
@@ -204,6 +205,8 @@ export default function ConfiguracoesPage() {
           </form>
         </CardContent>
       </Card>
+
+      <TwoFactorSettings />
     </div>
   );
 }
