@@ -30,21 +30,15 @@ function LoginForm() {
   const [remember, setRemember] = useState(false);
 
   async function finishLogin() {
-    console.log("[2fa-login] finishLogin: start", { remember });
     if (remember) {
       try {
-        console.log("[2fa-login] finishLogin: calling trustCurrentDevice");
-        const result = await trustCurrentDevice();
-        console.log("[2fa-login] finishLogin: trustCurrentDevice result", result);
-      } catch (err) {
-        console.error("[2fa-login] finishLogin: trustCurrentDevice threw", err);
+        await trustCurrentDevice();
+      } catch {
         // Confiar no dispositivo é opcional: nunca deve bloquear o login.
       }
     }
-    console.log("[2fa-login] finishLogin: navigating to /");
     router.push("/");
     router.refresh();
-    console.log("[2fa-login] finishLogin: navigation requested");
   }
 
   async function handleCredentialsSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -84,14 +78,12 @@ function LoginForm() {
     setError("");
 
     try {
-      console.log("[2fa-login] handleOtpSubmit: calling signIn");
       const result = await signIn("credentials", {
         callsign: callsign.toUpperCase(),
         password,
         otp,
         redirect: false,
       });
-      console.log("[2fa-login] handleOtpSubmit: signIn result", result);
 
       if (result?.error) {
         if (result.code === "INVALID_2FA") {
@@ -103,8 +95,7 @@ function LoginForm() {
       } else {
         await finishLogin();
       }
-    } catch (err) {
-      console.error("[2fa-login] handleOtpSubmit: threw", err);
+    } catch {
       setError("Não foi possível concluir o login. Tente novamente.");
       setPending(false);
     }

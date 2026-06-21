@@ -18,6 +18,10 @@ const ROUTE_ROLES: { pattern: RegExp; roles: AppRole[] }[] = [
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const { pathname } = req.nextUrl;
+  // Server Actions POST to the current route. Redirecting them (e.g. an
+  // authenticated user calling an action from /login) breaks the action with
+  // "An unexpected response was received from the server".
+  const isServerAction = req.method === "POST" && req.headers.has("next-action");
 
   const isPublicRoute =
     pathname === "/" ||
@@ -31,7 +35,11 @@ export default auth((req) => {
     pathname.startsWith("/api/auth");
 
   if (isPublicRoute) {
-    if (isLoggedIn && (pathname.startsWith("/login") || pathname.startsWith("/register"))) {
+    if (
+      isLoggedIn &&
+      !isServerAction &&
+      (pathname.startsWith("/login") || pathname.startsWith("/register"))
+    ) {
       return NextResponse.redirect(new URL("/", req.nextUrl));
     }
     return NextResponse.next();
