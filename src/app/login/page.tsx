@@ -31,7 +31,11 @@ function LoginForm() {
 
   async function finishLogin() {
     if (remember) {
-      await trustCurrentDevice();
+      try {
+        await trustCurrentDevice();
+      } catch {
+        // Confiar no dispositivo é opcional: nunca deve bloquear o login.
+      }
     }
     router.push("/");
     router.refresh();
@@ -42,24 +46,29 @@ function LoginForm() {
     setPending(true);
     setError("");
 
-    const result = await signIn("credentials", {
-      callsign: callsign.toUpperCase(),
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        callsign: callsign.toUpperCase(),
+        password,
+        redirect: false,
+      });
 
-    if (result?.error) {
-      if (result.code === "TWO_FACTOR_REQUIRED") {
-        setStep("otp");
-        setError("");
-      } else if (result.code === "EMAIL_NOT_VERIFIED") {
-        setError("E-mail não verificado. Verifique sua caixa de entrada para ativar sua conta.");
+      if (result?.error) {
+        if (result.code === "TWO_FACTOR_REQUIRED") {
+          setStep("otp");
+          setError("");
+        } else if (result.code === "EMAIL_NOT_VERIFIED") {
+          setError("E-mail não verificado. Verifique sua caixa de entrada para ativar sua conta.");
+        } else {
+          setError("Indicativo ou senha inválidos");
+        }
+        setPending(false);
       } else {
-        setError("Indicativo ou senha inválidos");
+        await finishLogin();
       }
+    } catch {
+      setError("Não foi possível concluir o login. Tente novamente.");
       setPending(false);
-    } else {
-      await finishLogin();
     }
   }
 
@@ -68,22 +77,27 @@ function LoginForm() {
     setPending(true);
     setError("");
 
-    const result = await signIn("credentials", {
-      callsign: callsign.toUpperCase(),
-      password,
-      otp,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        callsign: callsign.toUpperCase(),
+        password,
+        otp,
+        redirect: false,
+      });
 
-    if (result?.error) {
-      if (result.code === "INVALID_2FA") {
-        setError("Código de verificação inválido. Tente novamente.");
+      if (result?.error) {
+        if (result.code === "INVALID_2FA") {
+          setError("Código de verificação inválido. Tente novamente.");
+        } else {
+          setError("Não foi possível concluir o login. Tente novamente.");
+        }
+        setPending(false);
       } else {
-        setError("Não foi possível concluir o login. Tente novamente.");
+        await finishLogin();
       }
+    } catch {
+      setError("Não foi possível concluir o login. Tente novamente.");
       setPending(false);
-    } else {
-      await finishLogin();
     }
   }
 
