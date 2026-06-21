@@ -95,18 +95,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = credentials?.password as string | undefined;
         const otp = (credentials?.otp as string | undefined)?.trim() ?? "";
 
+        console.log("[2fa-auth] authorize: start", {
+          callsign,
+          hasPassword: !!password,
+          hasOtp: !!otp,
+        });
+
         if (!callsign || !password) return null;
 
         const user = await prisma.user.findUnique({
           where: { callsign: callsign.toUpperCase() },
         });
 
-        if (!user) return null;
+        if (!user) {
+          console.log("[2fa-auth] authorize: user not found");
+          return null;
+        }
 
         const isValid = await compare(password, user.passwordHash);
-        if (!isValid) return null;
+        if (!isValid) {
+          console.log("[2fa-auth] authorize: invalid password");
+          return null;
+        }
 
         if (!user.emailVerified) {
+          console.log("[2fa-auth] authorize: email not verified");
           throw new EmailNotVerifiedError();
         }
 
@@ -114,19 +127,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { userId: user.id },
         });
 
+        console.log("[2fa-auth] authorize: twoFactor", {
+          enabled: twoFactor?.enabled ?? false,
+        });
+
         if (twoFactor?.enabled) {
           const trusted = await isTrustedDevice(user.id, request);
+          console.log("[2fa-auth] authorize: trustedDevice", { trusted });
           if (!trusted) {
             if (!otp) {
+              console.log("[2fa-auth] authorize: throwing TwoFactorRequired");
               throw new TwoFactorRequiredError();
             }
             const ok = await verifyTwoFactor(user.id, otp);
+            console.log("[2fa-auth] authorize: verifyTwoFactor", { ok });
             if (!ok) {
               throw new InvalidTwoFactorError();
             }
           }
         }
 
+        console.log("[2fa-auth] authorize: success, returning user");
         return {
           id: user.id,
           name: user.name,

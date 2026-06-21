@@ -196,13 +196,18 @@ export async function regenerateRecoveryCodes(
 }
 
 export async function trustCurrentDevice(): Promise<SimpleResult> {
+  console.log("[2fa-trust] trustCurrentDevice: start");
   const user = await requireUser();
-  if (!user) return { ok: false, error: "Não autenticado." };
+  if (!user) {
+    console.log("[2fa-trust] trustCurrentDevice: no user session");
+    return { ok: false, error: "Não autenticado." };
+  }
 
   const twoFactor = await prisma.twoFactorAuth.findUnique({
     where: { userId: user.id },
   });
   if (!twoFactor?.enabled) {
+    console.log("[2fa-trust] trustCurrentDevice: 2FA not enabled");
     return { ok: false, error: "Autenticação de dois fatores não está ativa." };
   }
 
@@ -212,6 +217,7 @@ export async function trustCurrentDevice(): Promise<SimpleResult> {
   await prisma.trustedDevice.create({
     data: { userId: user.id, tokenHash: hashDeviceToken(token), expires },
   });
+  console.log("[2fa-trust] trustCurrentDevice: device row created");
 
   const cookieStore = await cookies();
   cookieStore.set(TRUSTED_DEVICE_COOKIE, token, {
@@ -222,6 +228,7 @@ export async function trustCurrentDevice(): Promise<SimpleResult> {
     maxAge: TRUSTED_DEVICE_MAX_AGE_SECONDS,
   });
 
+  console.log("[2fa-trust] trustCurrentDevice: done");
   return { ok: true };
 }
 
