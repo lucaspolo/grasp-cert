@@ -1,4 +1,7 @@
-.PHONY: dev build install up down db-migrate db-seed db-studio start
+.PHONY: dev build install up down db-migrate db-push db-seed db-studio start test
+
+test:
+	pnpm test
 
 start:
 	docker compose up -d
