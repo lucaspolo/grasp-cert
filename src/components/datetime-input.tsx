@@ -17,6 +17,30 @@ interface DateTimeInputProps {
   required?: boolean;
 }
 
+/** Converts an ISO defaultValue to local BR display format and parses it. */
+function parseDefaultValue(defaultValue: string): {
+  display: string;
+  date: Date | undefined;
+} {
+  if (!defaultValue) {
+    return { display: "", date: undefined };
+  }
+
+  let display = defaultValue;
+  if (/^\d{4}-\d{2}-\d{2}T/.test(defaultValue)) {
+    const d = new Date(defaultValue);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    const h = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    display = `${day}/${month}/${year} ${h}:${min}`;
+  }
+
+  const parsed = parse(display, "dd/MM/yyyy HH:mm", new Date());
+  return { display, date: isValid(parsed) ? parsed : undefined };
+}
+
 export function DateTimeInput({
   id,
   name,
@@ -30,33 +54,24 @@ export function DateTimeInput({
     placeholderChar: "_",
   });
 
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [hours, setHours] = useState("00");
-  const [minutes, setMinutes] = useState("00");
+  const [initial] = useState(() => parseDefaultValue(defaultValue));
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    initial.date
+  );
+  const [hours, setHours] = useState(
+    initial.date ? format(initial.date, "HH") : "00"
+  );
+  const [minutes, setMinutes] = useState(
+    initial.date ? format(initial.date, "mm") : "00"
+  );
   const [open, setOpen] = useState(false);
 
+  // Seeds the imask-controlled input (external system) with the initial value.
   useEffect(() => {
-    if (defaultValue) {
-      // If defaultValue is an ISO string, convert to local BR format
-      let displayValue = defaultValue;
-      if (/^\d{4}-\d{2}-\d{2}T/.test(defaultValue)) {
-        const d = new Date(defaultValue);
-        const day = String(d.getDate()).padStart(2, "0");
-        const month = String(d.getMonth() + 1).padStart(2, "0");
-        const year = d.getFullYear();
-        const h = String(d.getHours()).padStart(2, "0");
-        const min = String(d.getMinutes()).padStart(2, "0");
-        displayValue = `${day}/${month}/${year} ${h}:${min}`;
-      }
-      setValue(displayValue);
-      const parsed = parse(displayValue, "dd/MM/yyyy HH:mm", new Date());
-      if (isValid(parsed)) {
-        setSelectedDate(parsed);
-        setHours(format(parsed, "HH"));
-        setMinutes(format(parsed, "mm"));
-      }
+    if (initial.display) {
+      setValue(initial.display);
     }
-  }, [defaultValue, setValue]);
+  }, [initial.display, setValue]);
 
   function handleDateSelect(date: Date | undefined) {
     if (!date) return;

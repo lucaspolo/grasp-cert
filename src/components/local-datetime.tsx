@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMounted } from "@/lib/use-mounted";
 
 type LocalDateTimeProps = {
   date: string | Date;
@@ -19,24 +19,11 @@ function getUTCOffsetLabel(date: Date): string {
 }
 
 export function LocalDateTime({ date, showTime = false }: LocalDateTimeProps) {
-  const [formatted, setFormatted] = useState<string>("");
-
-  useEffect(() => {
-    const d = new Date(date);
-    if (showTime) {
-      const dateTimeStr = d.toLocaleString("pt-BR", {
-        dateStyle: "short",
-        timeStyle: "short",
-      });
-      setFormatted(`${dateTimeStr} (${getUTCOffsetLabel(d)})`);
-    } else {
-      setFormatted(d.toLocaleDateString("pt-BR"));
-    }
-  }, [date, showTime]);
+  const mounted = useMounted();
+  const d = new Date(date);
 
   // SSR fallback: render UTC date to avoid hydration mismatch
-  if (!formatted) {
-    const d = new Date(date);
+  if (!mounted) {
     if (showTime) {
       return (
         <time dateTime={d.toISOString()} suppressHydrationWarning>
@@ -51,8 +38,12 @@ export function LocalDateTime({ date, showTime = false }: LocalDateTimeProps) {
     );
   }
 
+  const formatted = showTime
+    ? `${d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} (${getUTCOffsetLabel(d)})`
+    : d.toLocaleDateString("pt-BR");
+
   return (
-    <time dateTime={new Date(date).toISOString()} suppressHydrationWarning>
+    <time dateTime={d.toISOString()} suppressHydrationWarning>
       {formatted}
     </time>
   );
