@@ -11,9 +11,12 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function parseBRDateTime(value: string): Date | null {
   // ISO-like (backwards compat with datetime-local values)
-  if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(value)) {
-    const d = new Date(value);
-    return isNaN(d.getTime()) ? null : d;
+  const iso = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/
+  );
+  if (iso) {
+    const [, year, month, day, hour, minute, second] = iso;
+    return buildLocalDate(year, month, day, hour, minute, second ?? "00");
   }
 
   // Brazilian: DD/MM/YYYY HH:mm
@@ -21,8 +24,38 @@ export function parseBRDateTime(value: string): Date | null {
   if (!m) return null;
 
   const [, day, month, year, hour, minute] = m;
-  const d = new Date(`${year}-${month}-${day}T${hour}:${minute}:00`);
-  return isNaN(d.getTime()) ? null : d;
+  return buildLocalDate(year, month, day, hour, minute, "00");
+}
+
+/**
+ * Builds a local Date validating each component: the Date constructor silently
+ * rolls invalid dates over (31/02 becomes 03/03), which would accept
+ * nonexistent dates typed by mistake.
+ */
+function buildLocalDate(
+  year: string,
+  month: string,
+  day: string,
+  hour: string,
+  minute: string,
+  second: string
+): Date | null {
+  const d = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+    Number(second)
+  );
+  const valid =
+    !isNaN(d.getTime()) &&
+    d.getFullYear() === Number(year) &&
+    d.getMonth() === Number(month) - 1 &&
+    d.getDate() === Number(day) &&
+    d.getHours() === Number(hour) &&
+    d.getMinutes() === Number(minute);
+  return valid ? d : null;
 }
 
 /**
