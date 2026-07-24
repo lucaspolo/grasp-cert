@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireRole, requireEventOperator } from "@/lib/auth-utils";
+import { recordAudit } from "@/lib/audit";
 import { parseBRDateTime } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -101,9 +102,31 @@ export async function createQSO(
 }
 
 export async function deleteQSO(qsoId: string, eventId: string) {
-  await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireRole(["OWNER", "ADMIN"]);
+
+  const qso = await prisma.qSO.findUnique({
+    where: { id: qsoId },
+    select: {
+      participantCallsign: true,
+      dateTime: true,
+      event: { select: { name: true } },
+    },
+  });
+  if (!qso) return;
 
   await prisma.qSO.delete({ where: { id: qsoId } });
+
+  await recordAudit(session.user, {
+    action: "qso.deleted",
+    entityType: "qso",
+    entityId: qsoId,
+    summary: `QSO de ${qso.participantCallsign} excluído do evento ${qso.event.name}`,
+    details: {
+      participantCallsign: qso.participantCallsign,
+      dateTime: qso.dateTime.toISOString(),
+      eventId,
+    },
+  });
 
   revalidatePath(`/admin/events/${eventId}/qsos`);
 }

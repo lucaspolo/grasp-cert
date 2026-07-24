@@ -8,6 +8,7 @@ type AppRole = "OWNER" | "ADMIN" | "OPERATOR" | "USER";
 
 const ROUTE_ROLES: { pattern: RegExp; roles: AppRole[] }[] = [
   { pattern: /^\/admin\/users/, roles: ["OWNER"] },
+  { pattern: /^\/admin\/audit/, roles: ["OWNER"] },
   { pattern: /^\/admin\/templates/, roles: ["OWNER", "ADMIN"] },
   { pattern: /^\/admin\/bands/, roles: ["OWNER", "ADMIN"] },
   { pattern: /^\/admin\/modes/, roles: ["OWNER", "ADMIN"] },

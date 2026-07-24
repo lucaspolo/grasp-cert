@@ -58,6 +58,11 @@ export function MobileNav({ callsign, role, signOutAction }: MobileNavProps) {
                   Usuários
                 </NavLink>
               )}
+              {isOwner && (
+                <NavLink href="/admin/audit" onClick={() => setOpen(false)}>
+                  Auditoria
+                </NavLink>
+              )}
               {hasAdminAccess && (
                 <NavLink href="/admin/events" onClick={() => setOpen(false)}>
                   Eventos

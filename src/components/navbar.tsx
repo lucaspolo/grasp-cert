@@ -56,6 +56,14 @@ export async function Navbar() {
                 Usuários
               </Link>
             )}
+            {isOwner && (
+              <Link
+                href="/admin/audit"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Auditoria
+              </Link>
+            )}
             {hasAdminAccess && (
               <Link
                 href="/admin/events"

@@ -76,6 +76,24 @@ model TrustedDevice {
   @@map("two_factor_trusted_devices")
 }
 
+// Trilha de auditoria de ações administrativas. Sem FK para User de
+// propósito: o registro deve sobreviver à exclusão do usuário que agiu.
+model AuditLog {
+  id            String   @id @default(uuid())
+  actorId       String?  @map("actor_id")
+  actorCallsign String   @map("actor_callsign")
+  action        String
+  entityType    String   @map("entity_type")
+  entityId      String?  @map("entity_id")
+  summary       String
+  details       Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
 model Template {
   id         String   @id @default(uuid())
   name       String

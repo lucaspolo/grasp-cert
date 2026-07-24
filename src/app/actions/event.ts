@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireRole, requireEventOperator } from "@/lib/auth-utils";
+import { recordAudit } from "@/lib/audit";
 import { parseBRDateTime, localToUTC } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -33,7 +34,7 @@ export async function createEvent(
   _prevState: EventFormState,
   formData: FormData
 ): Promise<EventFormState> {
-  await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireRole(["OWNER", "ADMIN"]);
 
   const bandIds = formData.getAll("bandIds") as string[];
   const modeIds = formData.getAll("modeIds") as string[];
@@ -55,7 +56,7 @@ export async function createEvent(
   const { name, startDate, endDate, observations, templateId } = parsed.data;
   const timezone = (formData.get("timezone") as string) || "UTC";
 
-  await prisma.event.create({
+  const event = await prisma.event.create({
     data: {
       name,
       startDate: localToUTC(startDate, timezone),
@@ -71,6 +72,13 @@ export async function createEvent(
     },
   });
 
+  await recordAudit(session.user, {
+    action: "event.created",
+    entityType: "event",
+    entityId: event.id,
+    summary: `Evento ${name} criado`,
+  });
+
   revalidatePath("/admin/events");
   revalidatePath("/");
   redirect("/admin/events");
@@ -81,7 +89,7 @@ export async function updateEvent(
   _prevState: EventFormState,
   formData: FormData
 ): Promise<EventFormState> {
-  await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireRole(["OWNER", "ADMIN"]);
 
   const bandIds = formData.getAll("bandIds") as string[];
   const modeIds = formData.getAll("modeIds") as string[];
@@ -124,15 +132,36 @@ export async function updateEvent(
     }),
   ]);
 
+  await recordAudit(session.user, {
+    action: "event.updated",
+    entityType: "event",
+    entityId: eventId,
+    summary: `Evento ${name} atualizado`,
+  });
+
   revalidatePath("/admin/events");
   revalidatePath("/");
   redirect("/admin/events");
 }
 
 export async function deleteEvent(eventId: string) {
-  await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireRole(["OWNER", "ADMIN"]);
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { name: true, _count: { select: { qsos: true } } },
+  });
+  if (!event) return;
 
   await prisma.event.delete({ where: { id: eventId } });
+
+  await recordAudit(session.user, {
+    action: "event.deleted",
+    entityType: "event",
+    entityId: eventId,
+    summary: `Evento ${event.name} excluído (${event._count.qsos} QSOs em cascata)`,
+    details: { name: event.name, qsoCount: event._count.qsos },
+  });
 
   revalidatePath("/admin/events");
 }

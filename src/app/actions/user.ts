@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireRole, type AppRole } from "@/lib/auth-utils";
+import { recordAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -43,9 +44,25 @@ export async function updateUserRole(userId: string, newRole: string) {
     return { error: "Cargo inválido." };
   }
 
+  const target = await prisma.user.findUnique({
+    where: { id: parsed.data.userId },
+    select: { callsign: true, role: true },
+  });
+  if (!target) {
+    return { error: "Usuário não encontrado." };
+  }
+
   await prisma.user.update({
     where: { id: parsed.data.userId },
     data: { role: parsed.data.role },
+  });
+
+  await recordAudit(session.user, {
+    action: "user.role_updated",
+    entityType: "user",
+    entityId: parsed.data.userId,
+    summary: `Cargo de ${target.callsign} alterado de ${target.role} para ${parsed.data.role}`,
+    details: { from: target.role, to: parsed.data.role },
   });
 
   revalidatePath("/admin/users");
@@ -59,18 +76,34 @@ export async function deleteUser(userId: string) {
     return { error: "Você não pode excluir sua própria conta." };
   }
 
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { callsign: true, email: true, role: true },
+  });
+  if (!target) {
+    return { error: "Usuário não encontrado." };
+  }
+
   await prisma.user.delete({ where: { id: userId } });
+
+  await recordAudit(session.user, {
+    action: "user.deleted",
+    entityType: "user",
+    entityId: userId,
+    summary: `Usuário ${target.callsign} (${target.email}) excluído`,
+    details: { callsign: target.callsign, email: target.email, role: target.role },
+  });
 
   revalidatePath("/admin/users");
   return { success: true };
 }
 
 export async function assignOperatorToEvent(userId: string, eventId: string) {
-  await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireRole(["OWNER", "ADMIN"]);
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true },
+    select: { callsign: true, role: true },
   });
 
   if (!user) {
@@ -87,15 +120,41 @@ export async function assignOperatorToEvent(userId: string, eventId: string) {
     create: { eventId, userId },
   });
 
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { name: true },
+  });
+
+  await recordAudit(session.user, {
+    action: "event.operator_assigned",
+    entityType: "event",
+    entityId: eventId,
+    summary: `Operador ${user.callsign} designado ao evento ${event?.name ?? eventId}`,
+    details: { userId, callsign: user.callsign },
+  });
+
   revalidatePath(`/admin/events/${eventId}/edit`);
   return { success: true };
 }
 
 export async function removeOperatorFromEvent(userId: string, eventId: string) {
-  await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireRole(["OWNER", "ADMIN"]);
 
   await prisma.eventOperator.delete({
     where: { eventId_userId: { eventId, userId } },
+  });
+
+  const [user, event] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { callsign: true } }),
+    prisma.event.findUnique({ where: { id: eventId }, select: { name: true } }),
+  ]);
+
+  await recordAudit(session.user, {
+    action: "event.operator_removed",
+    entityType: "event",
+    entityId: eventId,
+    summary: `Operador ${user?.callsign ?? userId} removido do evento ${event?.name ?? eventId}`,
+    details: { userId, callsign: user?.callsign },
   });
 
   revalidatePath(`/admin/events/${eventId}/edit`);
@@ -148,7 +207,7 @@ export async function updateUser(userId: string, data: {
   city: string;
   state: string;
 }) {
-  await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireRole(["OWNER", "ADMIN"]);
 
   const parsed = updateUserSchema.safeParse({ userId, ...data });
   if (!parsed.success) {
@@ -185,12 +244,30 @@ export async function updateUser(userId: string, data: {
     data: { callsign, name, email, city, state },
   });
 
+  const next = { callsign, name, email, city, state };
+  const before: Record<string, string> = {};
+  const after: Record<string, string> = {};
+  for (const key of Object.keys(next) as (keyof typeof next)[]) {
+    if (currentUser[key] !== next[key]) {
+      before[key] = currentUser[key];
+      after[key] = next[key];
+    }
+  }
+
+  await recordAudit(session.user, {
+    action: "user.updated",
+    entityType: "user",
+    entityId: userId,
+    summary: `Dados de ${currentUser.callsign} atualizados (${Object.keys(after).join(", ") || "sem alterações"})`,
+    details: { before, after },
+  });
+
   revalidatePath("/admin/users");
   return { success: true };
 }
 
 export async function verifyUserEmail(userId: string) {
-  await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireRole(["OWNER", "ADMIN"]);
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
@@ -204,6 +281,14 @@ export async function verifyUserEmail(userId: string) {
   await prisma.user.update({
     where: { id: userId },
     data: { emailVerified: new Date() },
+  });
+
+  await recordAudit(session.user, {
+    action: "user.email_verified",
+    entityType: "user",
+    entityId: userId,
+    summary: `E-mail de ${user.callsign} verificado manualmente`,
+    details: { email: user.email },
   });
 
   revalidatePath("/admin/users");

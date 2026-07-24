@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-utils";
+import { recordAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -63,7 +64,7 @@ export async function createTemplate(
   _prevState: TemplateFormState,
   formData: FormData
 ): Promise<TemplateFormState> {
-  await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireRole(["OWNER", "ADMIN"]);
 
   const parsed = templateNameSchema.safeParse({
     name: formData.get("name"),
@@ -77,6 +78,13 @@ export async function createTemplate(
     data: { name: parsed.data.name },
   });
 
+  await recordAudit(session.user, {
+    action: "template.created",
+    entityType: "template",
+    entityId: template.id,
+    summary: `Template ${template.name} criado`,
+  });
+
   redirect(`/admin/templates/${template.id}/edit`);
 }
 
@@ -85,7 +93,7 @@ export async function updateTemplateName(
   _prevState: TemplateFormState,
   formData: FormData
 ): Promise<TemplateFormState> {
-  await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireRole(["OWNER", "ADMIN"]);
 
   const parsed = templateNameSchema.safeParse({
     name: formData.get("name"),
@@ -95,9 +103,22 @@ export async function updateTemplateName(
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
+  const previous = await prisma.template.findUnique({
+    where: { id: templateId },
+    select: { name: true },
+  });
+
   await prisma.template.update({
     where: { id: templateId },
     data: { name: parsed.data.name },
+  });
+
+  await recordAudit(session.user, {
+    action: "template.renamed",
+    entityType: "template",
+    entityId: templateId,
+    summary: `Template renomeado de ${previous?.name ?? "?"} para ${parsed.data.name}`,
+    details: { from: previous?.name, to: parsed.data.name },
   });
 
   revalidatePath(`/admin/templates/${templateId}/edit`);
@@ -106,11 +127,11 @@ export async function updateTemplateName(
 }
 
 export async function deleteTemplate(templateId: string) {
-  await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireRole(["OWNER", "ADMIN"]);
 
   const template = await prisma.template.findUnique({
     where: { id: templateId },
-    select: { _count: { select: { events: true } } },
+    select: { name: true, _count: { select: { events: true } } },
   });
 
   if (!template) {
@@ -124,6 +145,14 @@ export async function deleteTemplate(templateId: string) {
   }
 
   await prisma.template.delete({ where: { id: templateId } });
+
+  await recordAudit(session.user, {
+    action: "template.deleted",
+    entityType: "template",
+    entityId: templateId,
+    summary: `Template ${template.name} excluído`,
+    details: { name: template.name },
+  });
 
   revalidatePath("/admin/templates");
   return { success: true };
@@ -139,7 +168,7 @@ const MAX_HEIGHT = 1200;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export async function uploadTemplateBg(templateId: string, formData: FormData) {
-  await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireRole(["OWNER", "ADMIN"]);
 
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) {
@@ -174,11 +203,25 @@ export async function uploadTemplateBg(templateId: string, formData: FormData) {
     };
   }
 
-  await prisma.template.update({
+  const template = await prisma.template.update({
     where: { id: templateId },
     data: {
       bgImage: buffer,
       bgMimeType: file.type,
+    },
+    select: { name: true },
+  });
+
+  await recordAudit(session.user, {
+    action: "template.bg_uploaded",
+    entityType: "template",
+    entityId: templateId,
+    summary: `Imagem de fundo do template ${template.name} atualizada`,
+    details: {
+      mimeType: file.type,
+      sizeBytes: file.size,
+      width: metadata.width,
+      height: metadata.height,
     },
   });
 
@@ -192,16 +235,24 @@ export async function saveTemplateConfig(
   templateId: string,
   config: TemplateConfig
 ) {
-  await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireRole(["OWNER", "ADMIN"]);
 
   const parsed = templateConfigSchema.safeParse(config);
   if (!parsed.success) {
     return { error: "Configuração inválida." };
   }
 
-  await prisma.template.update({
+  const template = await prisma.template.update({
     where: { id: templateId },
     data: { config: parsed.data },
+    select: { name: true },
+  });
+
+  await recordAudit(session.user, {
+    action: "template.config_updated",
+    entityType: "template",
+    entityId: templateId,
+    summary: `Layout do template ${template.name} atualizado`,
   });
 
   revalidatePath(`/admin/templates/${templateId}/edit`);
