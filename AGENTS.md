@@ -142,7 +142,9 @@ prisma/
 | QSOs | `src/app/actions/qso.ts`, `src/components/qso-form.tsx`, `src/app/admin/events/[id]/qsos/` |
 | Certificates | `src/app/api/cert/[qsoId]/route.tsx`, `src/lib/template-config.ts` |
 | Templates | `src/app/actions/template.ts`, `src/components/template-editor.tsx`, `src/components/template-table.tsx`, `src/app/admin/templates/`, `src/app/api/templates/[id]/image/` |
+| Auditoria | `src/lib/audit.ts` (helper `recordAudit`), `src/app/actions/audit.ts`, `src/app/admin/audit/`, `src/components/audit-table.tsx` |
 | Database | `prisma/schema.prisma`, `src/lib/prisma.ts` |
+| Testes | `vitest.config.mts`, `src/**/*.test.ts` (Vitest, ambiente node; `server-only` tem stub em `tests/stubs/`) |
 
 ## Development Commands
 
@@ -151,7 +153,11 @@ make start      # Docker up + db push + dev server (full startup)
 make dev        # Dev server only
 make build      # Production build
 make up / down  # Docker Compose control
-make db-push    # Sync Prisma schema to DB
+make db-push    # Sync Prisma schema to DB (dev only — prefer db-migrate for schema changes)
+make db-migrate # Create/apply Prisma migrations (keeps history for migrate deploy)
 make db-seed    # Seed admin user + default template
 make db-studio  # Open Prisma Studio
+make test       # Run Vitest suite
 ```
+
+- Mutações administrativas devem registrar auditoria via `recordAudit()` de `src/lib/audit.ts` (exceção deliberada: criação de QSO, por volume).
