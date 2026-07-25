@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { requireRole, requireEventOperator } from "@/lib/auth-utils";
 import { recordAudit } from "@/lib/audit";
 import { parseBRDateTime } from "@/lib/utils";
@@ -82,20 +83,37 @@ export async function createQSO(
     return { errors: fieldErrors };
   }
 
-  await prisma.qSO.create({
-    data: {
-      eventId,
-      participantCallsign,
-      operatorCallsign: session.user.callsign ?? null,
-      dateTime,
-      bandId,
-      modeId,
-      frequency: frequency || "",
-      rstSent,
-      rstReceived,
-      observations: observations || null,
-    },
-  });
+  try {
+    await prisma.qSO.create({
+      data: {
+        eventId,
+        participantCallsign,
+        operatorCallsign: session.user.callsign ?? null,
+        dateTime,
+        bandId,
+        modeId,
+        frequency: frequency || "",
+        rstSent,
+        rstReceived,
+        observations: observations || null,
+      },
+    });
+  } catch (error) {
+    // Violação da constraint de unicidade do QSO (mesmo contato repetido).
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return {
+        errors: {
+          participantCallsign: [
+            "QSO duplicado — já existe um contato idêntico neste evento.",
+          ],
+        },
+      };
+    }
+    throw error;
+  }
 
   revalidatePath(`/admin/events/${eventId}/qsos`);
   return { message: "QSO adicionado com sucesso." };

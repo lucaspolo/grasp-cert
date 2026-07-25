@@ -164,6 +164,9 @@ model QSO {
   band    Band  @relation(fields: [bandId], references: [id])
   modeRef Mode  @relation(fields: [modeId], references: [id])
 
+  // Um mesmo contato (indicativo, horário, banda, modo) não pode ser lançado
+  // duas vezes no mesmo evento — protege digitação manual e importação ADIF.
+  @@unique([eventId, participantCallsign, dateTime, bandId, modeId])
   @@map("qsos")
 }
 
