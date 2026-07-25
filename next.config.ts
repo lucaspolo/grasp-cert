@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 // CSP mínima e segura: bloqueia embed em iframes. Uma CSP completa
 // (script-src etc.) exige nonces por request — fica para um passo futuro.
@@ -24,4 +25,13 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Upload de source maps só acontece quando SENTRY_AUTH_TOKEN existe (a
+// integração Sentry↔Vercel define org/project/token); sem ele o build
+// segue normal e os erros chegam sem stack desminificado.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+  disableLogger: true,
+});

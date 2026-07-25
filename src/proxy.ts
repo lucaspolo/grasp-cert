@@ -33,6 +33,7 @@ export default auth((req) => {
     pathname.startsWith("/verificar-email") ||
     pathname.startsWith("/verificar-certificado") ||
     pathname.startsWith("/api/verificar-certificado") ||
+    pathname.startsWith("/api/health") ||
     pathname.startsWith("/api/auth");
 
   if (isPublicRoute) {

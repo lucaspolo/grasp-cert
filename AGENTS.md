@@ -144,6 +144,7 @@ prisma/
 | Templates | `src/app/actions/template.ts`, `src/components/template-editor.tsx`, `src/components/template-table.tsx`, `src/app/admin/templates/`, `src/app/api/templates/[id]/image/` |
 | Auditoria | `src/lib/audit.ts` (helper `recordAudit`), `src/app/actions/audit.ts`, `src/app/admin/audit/`, `src/components/audit-table.tsx` |
 | Segurança | `src/lib/rate-limit.ts` (janela fixa no Postgres), `src/lib/jwt-refresh.ts` (revalidação do JWT), `src/lib/second-factor.ts` (verificação 2FA com anti-replay), `src/lib/secret-crypto.ts` (secrets TOTP cifrados, env `TOTP_ENC_KEY`), `next.config.ts` (security headers) |
+| Observabilidade | `src/instrumentation.ts` + `src/instrumentation-client.ts` + `sentry.*.config.ts` (Sentry, env `NEXT_PUBLIC_SENTRY_DSN`, só ativo em produção), `src/lib/sentry-scrub.ts` (beforeSend — nunca remover), `src/app/api/health/route.ts` (healthcheck público) |
 | Database | `prisma/schema.prisma`, `src/lib/prisma.ts` |
 | Testes | `vitest.config.mts`, `src/**/*.test.ts` (Vitest, ambiente node; `server-only` tem stub em `tests/stubs/`) |
 
