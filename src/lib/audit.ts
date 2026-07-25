@@ -1,5 +1,6 @@
 import "server-only";
 
+import * as Sentry from "@sentry/nextjs";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 
@@ -39,6 +40,9 @@ export async function recordAudit(
       },
     });
   } catch (error) {
+    // Engolida de propósito (best-effort), mas reportada: perder trilha de
+    // auditoria silenciosamente esconderia um problema real de banco.
     console.error("[audit] Falha ao registrar auditoria:", error);
+    Sentry.captureException(error);
   }
 }

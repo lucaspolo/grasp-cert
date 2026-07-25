@@ -4,8 +4,10 @@ import type { Mock } from "vitest";
 vi.mock("@/lib/prisma", () => ({
   prisma: { auditLog: { create: vi.fn() } },
 }));
+vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 import { prisma } from "@/lib/prisma";
+import { captureException } from "@sentry/nextjs";
 import { recordAudit } from "./audit";
 
 const createMock = prisma.auditLog.create as unknown as Mock;
@@ -65,6 +67,8 @@ describe("recordAudit", () => {
     ).resolves.toBeUndefined();
 
     expect(errorSpy).toHaveBeenCalled();
+    // Engolida, mas reportada ao Sentry.
+    expect(captureException).toHaveBeenCalledTimes(1);
     errorSpy.mockRestore();
   });
 });
