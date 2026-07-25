@@ -14,17 +14,21 @@ import {
 } from "./two-factor";
 
 describe("verifyTotp", () => {
-  it("aceita um código gerado agora para o mesmo secret", () => {
+  it("aceita um código gerado agora e informa o timestep", () => {
     const secret = generateTotpSecret();
     const token = generateSync({ secret });
-    expect(verifyTotp(token, secret)).toBe(true);
+    const result = verifyTotp(token, secret);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.timeStep).toBeGreaterThan(0);
+    }
   });
 
   it("aceita código com espaços (formato de app autenticador)", () => {
     const secret = generateTotpSecret();
     const token = generateSync({ secret });
     const spaced = `${token.slice(0, 3)} ${token.slice(3)}`;
-    expect(verifyTotp(spaced, secret)).toBe(true);
+    expect(verifyTotp(spaced, secret).valid).toBe(true);
   });
 
   it("rejeita código de outro secret", () => {
@@ -32,20 +36,50 @@ describe("verifyTotp", () => {
     const other = generateTotpSecret();
     const token = generateSync({ secret: other });
     // Colisão entre dois secrets aleatórios é possível mas astronomicamente rara.
-    expect(verifyTotp(token, secret)).toBe(false);
+    expect(verifyTotp(token, secret).valid).toBe(false);
   });
 
   it("rejeita formatos inválidos sem lançar erro", () => {
     const secret = generateTotpSecret();
-    expect(verifyTotp("", secret)).toBe(false);
-    expect(verifyTotp("12345", secret)).toBe(false);
-    expect(verifyTotp("1234567", secret)).toBe(false);
-    expect(verifyTotp("abcdef", secret)).toBe(false);
-    expect(verifyTotp("12 34 5a", secret)).toBe(false);
+    expect(verifyTotp("", secret).valid).toBe(false);
+    expect(verifyTotp("12345", secret).valid).toBe(false);
+    expect(verifyTotp("1234567", secret).valid).toBe(false);
+    expect(verifyTotp("abcdef", secret).valid).toBe(false);
+    expect(verifyTotp("12 34 5a", secret).valid).toBe(false);
   });
 
   it("não lança erro com secret inválido", () => {
-    expect(verifyTotp("123456", "not-base32-!!!")).toBe(false);
+    expect(verifyTotp("123456", "not-base32-!!!").valid).toBe(false);
+  });
+});
+
+describe("verifyTotp — anti-replay (RFC 6238 §5.2)", () => {
+  it("rejeita o mesmo código quando afterTimeStep é o timestep aceito", () => {
+    const secret = generateTotpSecret();
+    const token = generateSync({ secret });
+    const first = verifyTotp(token, secret);
+    expect(first.valid).toBe(true);
+    if (!first.valid) return;
+
+    // Replay: o código do timestep já usado não vale de novo.
+    expect(verifyTotp(token, secret, first.timeStep).valid).toBe(false);
+  });
+
+  it("aceita código de timestep posterior ao último usado", () => {
+    const secret = generateTotpSecret();
+    const token = generateSync({ secret });
+    const result = verifyTotp(token, secret);
+    expect(result.valid).toBe(true);
+    if (!result.valid) return;
+
+    // Simula último uso no passo anterior: o código atual continua válido.
+    expect(verifyTotp(token, secret, result.timeStep - 1).valid).toBe(true);
+  });
+
+  it("sem afterTimeStep (null) o código atual é aceito", () => {
+    const secret = generateTotpSecret();
+    const token = generateSync({ secret });
+    expect(verifyTotp(token, secret, null).valid).toBe(true);
   });
 });
 

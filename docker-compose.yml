@@ -3,7 +3,8 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      # Loopback apenas: credencial fraca de dev não deve ficar exposta na rede
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_USER: grasp
       POSTGRES_PASSWORD: grasp

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { generateEmailVerificationToken } from "@/lib/tokens";
 import { sendVerificationEmail } from "@/lib/mail";
+import { consumeRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const registerSchema = z
   .object({
@@ -21,7 +22,7 @@ const registerSchema = z
       .string()
       .length(2, "Estado deve ter 2 caracteres (UF)")
       .transform((v) => v.toUpperCase().trim()),
-    password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+    password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -66,6 +67,21 @@ export async function registerUser(
   const existingEmail = await prisma.user.findUnique({ where: { email } });
   if (existingEmail) {
     return { errors: { email: ["E-mail já cadastrado"] } };
+  }
+
+  // Freia criação de contas em massa e o disparo de e-mails de verificação.
+  const ip = await getClientIp();
+  const attempt = await consumeRateLimit({
+    key: `register:ip:${ip}`,
+    limit: 5,
+    windowSeconds: 60 * 60,
+  });
+  if (!attempt.allowed) {
+    return {
+      errors: {
+        callsign: ["Muitos cadastros a partir deste endereço. Tente mais tarde."],
+      },
+    };
   }
 
   const passwordHash = hashSync(password, 10);

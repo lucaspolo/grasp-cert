@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { updateProfile, getProfile, type ProfileState } from "@/app/actions/profile";
+import { getTwoFactorStatus } from "@/app/actions/two-factor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,12 +27,17 @@ export default function ConfiguracoesPage() {
     state: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [emailValue, setEmailValue] = useState<string | null>(null);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
   useEffect(() => {
-    getProfile().then((data) => {
-      setProfile(data);
-      setLoading(false);
-    });
+    Promise.all([getProfile(), getTwoFactorStatus()]).then(
+      ([data, twoFactor]) => {
+        setProfile(data);
+        setTwoFactorEnabled(twoFactor?.enabled ?? false);
+        setLoading(false);
+      }
+    );
   }, []);
 
   if (loading) {
@@ -109,6 +115,7 @@ export default function ConfiguracoesPage() {
                 name="email"
                 type="email"
                 defaultValue={profile.email}
+                onChange={(e) => setEmailValue(e.target.value)}
                 required
               />
               {state.errors?.email && (
@@ -117,6 +124,33 @@ export default function ConfiguracoesPage() {
               <p className="text-xs text-muted-foreground">
                 Se alterar o e-mail, será necessário verificá-lo novamente.
               </p>
+              {emailValue !== null && emailValue !== profile.email && (
+                <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-950">
+                  <p className="text-xs text-amber-800 dark:text-amber-300">
+                    Para alterar o e-mail, informe sua senha atual no campo
+                    &ldquo;Senha atual&rdquo; abaixo.
+                    {twoFactorEnabled &&
+                      " Como o 2FA está ativo, informe também um código do autenticador."}
+                  </p>
+                  {twoFactorEnabled && (
+                    <div className="space-y-2">
+                      <Label htmlFor="otp">Código do autenticador</Label>
+                      <Input
+                        id="otp"
+                        name="otp"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        placeholder="000000"
+                      />
+                      {state.errors?.otp && (
+                        <p className="text-sm text-destructive">
+                          {state.errors.otp[0]}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -176,7 +210,7 @@ export default function ConfiguracoesPage() {
                 id="newPassword"
                 name="newPassword"
                 type="password"
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8 caracteres"
               />
               {state.errors?.newPassword && (
                 <p className="text-sm text-destructive">

@@ -22,6 +22,9 @@ model User {
   state          String
   role           Role            @default(USER)
   passwordHash   String          @map("password_hash")
+  // Incrementada no reset de senha: tokens JWT emitidos com versão anterior
+  // são invalidados na próxima revalidação (src/lib/jwt-refresh.ts).
+  sessionVersion Int             @default(0) @map("session_version")
   emailVerified  DateTime?       @map("email_verified")
   createdAt      DateTime        @default(now()) @map("created_at")
   updatedAt      DateTime        @updatedAt @map("updated_at")
@@ -35,11 +38,14 @@ model User {
 }
 
 model TwoFactorAuth {
-  id          String    @id @default(uuid())
-  userId      String    @unique @map("user_id")
-  secret      String
-  enabled     Boolean   @default(false)
-  confirmedAt DateTime? @map("confirmed_at")
+  id           String    @id @default(uuid())
+  userId       String    @unique @map("user_id")
+  secret       String
+  enabled      Boolean   @default(false)
+  // Último timestep TOTP aceito — códigos deste passo ou anteriores são
+  // rejeitados (anti-replay, RFC 6238 §5.2).
+  lastUsedStep Int?      @map("last_used_step")
+  confirmedAt  DateTime? @map("confirmed_at")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
@@ -74,6 +80,19 @@ model TrustedDevice {
 
   @@index([userId])
   @@map("two_factor_trusted_devices")
+}
+
+// Contadores de rate limiting (janela fixa + lockout). Vivem no Postgres
+// porque o app roda em serverless (Vercel): memória local não é compartilhada
+// entre instâncias. Linhas expiradas são limpas oportunisticamente.
+model RateLimit {
+  key         String    @id
+  count       Int       @default(0)
+  windowStart DateTime  @map("window_start")
+  lockedUntil DateTime? @map("locked_until")
+
+  @@index([windowStart])
+  @@map("rate_limits")
 }
 
 // Trilha de auditoria de ações administrativas. Sem FK para User de

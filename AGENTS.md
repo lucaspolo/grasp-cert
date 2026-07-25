@@ -143,6 +143,7 @@ prisma/
 | Certificates | `src/app/api/cert/[qsoId]/route.tsx`, `src/lib/template-config.ts` |
 | Templates | `src/app/actions/template.ts`, `src/components/template-editor.tsx`, `src/components/template-table.tsx`, `src/app/admin/templates/`, `src/app/api/templates/[id]/image/` |
 | Auditoria | `src/lib/audit.ts` (helper `recordAudit`), `src/app/actions/audit.ts`, `src/app/admin/audit/`, `src/components/audit-table.tsx` |
+| Segurança | `src/lib/rate-limit.ts` (janela fixa no Postgres), `src/lib/jwt-refresh.ts` (revalidação do JWT), `src/lib/second-factor.ts` (verificação 2FA com anti-replay), `src/lib/secret-crypto.ts` (secrets TOTP cifrados, env `TOTP_ENC_KEY`), `next.config.ts` (security headers) |
 | Database | `prisma/schema.prisma`, `src/lib/prisma.ts` |
 | Testes | `vitest.config.mts`, `src/**/*.test.ts` (Vitest, ambiente node; `server-only` tem stub em `tests/stubs/`) |
 
@@ -161,3 +162,5 @@ make test       # Run Vitest suite
 ```
 
 - Mutações administrativas devem registrar auditoria via `recordAudit()` de `src/lib/audit.ts` (exceção deliberada: criação de QSO, por volume).
+- Toda função exportada em arquivo `"use server"` é um endpoint HTTP público — deve começar com `requireRole(...)` ou `auth()` (exceção deliberada e comentada: `listPublicEvents`).
+- Rate limiting usa `consumeRateLimit()` de `src/lib/rate-limit.ts` (estado no Postgres — nunca em memória, o app roda em serverless). Verificação de OTP/código de recuperação passa sempre por `verifyUserSecondFactor()` de `src/lib/second-factor.ts`, que aplica rate limit, anti-replay e criptografia do secret.

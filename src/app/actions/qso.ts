@@ -132,6 +132,7 @@ export async function deleteQSO(qsoId: string, eventId: string) {
 }
 
 export async function listQSOsByEvent(eventId: string) {
+  await requireRole(["OWNER", "ADMIN", "OPERATOR"]);
   return prisma.qSO.findMany({
     where: { eventId },
     orderBy: { dateTime: "desc" },
