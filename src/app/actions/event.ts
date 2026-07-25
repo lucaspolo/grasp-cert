@@ -167,6 +167,7 @@ export async function deleteEvent(eventId: string) {
 }
 
 export async function listEvents() {
+  await requireRole(["OWNER", "ADMIN", "OPERATOR"]);
   return prisma.event.findMany({
     orderBy: { startDate: "desc" },
     include: {
@@ -179,6 +180,7 @@ export async function listEvents() {
 }
 
 export async function getEvent(id: string) {
+  await requireRole(["OWNER", "ADMIN", "OPERATOR"]);
   return prisma.event.findUnique({
     where: { id },
     include: {
@@ -189,6 +191,8 @@ export async function getEvent(id: string) {
   });
 }
 
+// Intencionalmente pública (sem requireRole): alimenta a página inicial
+// sem login, que exibe nome, datas, faixas/modos e observações do evento.
 export async function listPublicEvents() {
   const now = new Date();
   return prisma.event.findMany({

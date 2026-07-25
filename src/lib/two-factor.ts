@@ -26,18 +26,35 @@ export function buildOtpAuthUrl(callsign: string, secret: string): string {
   return generateURI({ issuer: ISSUER, label: callsign, secret });
 }
 
-/** Verifies a 6-digit TOTP code against the secret (with small time window). */
-export function verifyTotp(token: string, secret: string): boolean {
+export type TotpVerification =
+  | { valid: true; timeStep: number }
+  | { valid: false };
+
+/**
+ * Verifies a 6-digit TOTP code against the secret (with small time window).
+ * Pass the last accepted timestep as `afterTimeStep` to reject replay of
+ * previously accepted codes (RFC 6238 §5.2); persist `timeStep` on success.
+ */
+export function verifyTotp(
+  token: string,
+  secret: string,
+  afterTimeStep?: number | null
+): TotpVerification {
   const normalized = token.replace(/\s+/g, "");
-  if (!/^\d{6}$/.test(normalized)) return false;
+  if (!/^\d{6}$/.test(normalized)) return { valid: false };
   try {
-    return verifySync({
+    const result = verifySync({
       token: normalized,
       secret,
       epochTolerance: EPOCH_TOLERANCE_SECONDS,
-    }).valid;
+      ...(afterTimeStep != null && { afterTimeStep }),
+    });
+    // O retorno é uma união TOTP|HOTP; só a variante TOTP tem timeStep.
+    return result.valid && "timeStep" in result
+      ? { valid: true, timeStep: result.timeStep }
+      : { valid: false };
   } catch {
-    return false;
+    return { valid: false };
   }
 }
 

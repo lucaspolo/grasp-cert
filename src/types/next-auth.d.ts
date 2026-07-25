@@ -14,6 +14,7 @@ declare module "next-auth" {
   interface User {
     role: AppRole;
     callsign: string;
+    sessionVersion?: number;
   }
 }
 
@@ -22,5 +23,9 @@ declare module "next-auth/jwt" {
     id: string;
     role: AppRole;
     callsign: string;
+    /** Versão da sessão no momento do login — divergência invalida o token. */
+    sessionVersion?: number;
+    /** Epoch (s) da última revalidação dos claims contra o banco. */
+    refreshedAt?: number;
   }
 }

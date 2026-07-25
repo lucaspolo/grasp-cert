@@ -48,6 +48,7 @@ export async function listTemplates() {
 }
 
 export async function getTemplate(id: string) {
+  await requireRole(["OWNER", "ADMIN"]);
   return prisma.template.findUnique({
     where: { id },
     select: {
@@ -203,11 +204,26 @@ export async function uploadTemplateBg(templateId: string, formData: FormData) {
     };
   }
 
+  // file.type é controlado pelo cliente — o formato real vem do sharp.
+  // Re-encodar normaliza o arquivo e descarta metadados/payloads embutidos.
+  const format = metadata.format;
+  if (format !== "png" && format !== "jpeg" && format !== "webp") {
+    return { error: "Formato inválido. Use PNG, JPEG ou WebP." };
+  }
+
+  const reencoded = new Uint8Array(
+    await sharp(buffer)
+      .rotate() // aplica a orientação EXIF antes de descartá-la
+      .toFormat(format, format === "png" ? {} : { quality: 90 })
+      .toBuffer()
+  );
+  const mimeType = `image/${format}`;
+
   const template = await prisma.template.update({
     where: { id: templateId },
     data: {
-      bgImage: buffer,
-      bgMimeType: file.type,
+      bgImage: reencoded,
+      bgMimeType: mimeType,
     },
     select: { name: true },
   });
@@ -218,8 +234,8 @@ export async function uploadTemplateBg(templateId: string, formData: FormData) {
     entityId: templateId,
     summary: `Imagem de fundo do template ${template.name} atualizada`,
     details: {
-      mimeType: file.type,
-      sizeBytes: file.size,
+      mimeType,
+      sizeBytes: reencoded.length,
       width: metadata.width,
       height: metadata.height,
     },

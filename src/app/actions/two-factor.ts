@@ -8,7 +8,6 @@ import {
   TRUSTED_DEVICE_COOKIE,
   TRUSTED_DEVICE_MAX_AGE_SECONDS,
   buildOtpAuthUrl,
-  compareRecoveryCode,
   generateDeviceToken,
   generateRecoveryCodes,
   generateTotpSecret,
@@ -16,6 +15,8 @@ import {
   hashRecoveryCode,
   verifyTotp,
 } from "@/lib/two-factor";
+import { verifyUserSecondFactor } from "@/lib/second-factor";
+import { decryptSecret, encryptSecret } from "@/lib/secret-crypto";
 
 export type TwoFactorStatus = {
   enabled: boolean;
@@ -65,10 +66,11 @@ export async function startTwoFactorSetup(): Promise<StartSetupResult> {
   }
 
   const secret = generateTotpSecret();
+  const storedSecret = encryptSecret(secret);
   await prisma.twoFactorAuth.upsert({
     where: { userId: user.id },
-    create: { userId: user.id, secret, enabled: false },
-    update: { secret, enabled: false, confirmedAt: null },
+    create: { userId: user.id, secret: storedSecret, enabled: false },
+    update: { secret: storedSecret, enabled: false, confirmedAt: null },
   });
 
   const otpauthUrl = buildOtpAuthUrl(user.callsign, secret);
@@ -97,7 +99,12 @@ export async function confirmTwoFactorSetup(
     return { ok: false, error: "A autenticação de dois fatores já está ativa." };
   }
 
-  if (!verifyTotp(code, twoFactor.secret)) {
+  const totp = verifyTotp(
+    code,
+    decryptSecret(twoFactor.secret),
+    twoFactor.lastUsedStep
+  );
+  if (!totp.valid) {
     return { ok: false, error: "Código inválido. Tente novamente." };
   }
 
@@ -106,7 +113,11 @@ export async function confirmTwoFactorSetup(
   await prisma.$transaction([
     prisma.twoFactorAuth.update({
       where: { userId: user.id },
-      data: { enabled: true, confirmedAt: new Date() },
+      data: {
+        enabled: true,
+        confirmedAt: new Date(),
+        lastUsedStep: totp.timeStep,
+      },
     }),
     prisma.twoFactorRecoveryCode.deleteMany({ where: { userId: user.id } }),
     prisma.twoFactorRecoveryCode.createMany({
@@ -122,36 +133,18 @@ export async function confirmTwoFactorSetup(
 
 export type SimpleResult = { ok: true } | { ok: false; error: string };
 
-async function verifyUserCode(userId: string, code: string): Promise<boolean> {
-  const twoFactor = await prisma.twoFactorAuth.findUnique({
-    where: { userId },
-  });
-  if (!twoFactor?.enabled) return false;
-
-  if (verifyTotp(code, twoFactor.secret)) return true;
-
-  const recoveryCodes = await prisma.twoFactorRecoveryCode.findMany({
-    where: { userId, usedAt: null },
-  });
-  for (const recovery of recoveryCodes) {
-    if (compareRecoveryCode(code, recovery.codeHash)) {
-      await prisma.twoFactorRecoveryCode.update({
-        where: { id: recovery.id },
-        data: { usedAt: new Date() },
-      });
-      return true;
-    }
-  }
-  return false;
-}
+const SECOND_FACTOR_ERRORS: Record<"invalid" | "rate_limited", string> = {
+  invalid: "Código inválido. Tente novamente.",
+  rate_limited: "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
+};
 
 export async function disableTwoFactor(code: string): Promise<SimpleResult> {
   const user = await requireUser();
   if (!user) return { ok: false, error: "Não autenticado." };
 
-  const valid = await verifyUserCode(user.id, code);
-  if (!valid) {
-    return { ok: false, error: "Código inválido. Tente novamente." };
+  const second = await verifyUserSecondFactor(user.id, code);
+  if (second !== "valid") {
+    return { ok: false, error: SECOND_FACTOR_ERRORS[second] };
   }
 
   await prisma.$transaction([
@@ -176,9 +169,9 @@ export async function regenerateRecoveryCodes(
   const user = await requireUser();
   if (!user) return { ok: false, error: "Não autenticado." };
 
-  const valid = await verifyUserCode(user.id, code);
-  if (!valid) {
-    return { ok: false, error: "Código inválido. Tente novamente." };
+  const second = await verifyUserSecondFactor(user.id, code);
+  if (second !== "valid") {
+    return { ok: false, error: SECOND_FACTOR_ERRORS[second] };
   }
 
   const recoveryCodes = generateRecoveryCodes();

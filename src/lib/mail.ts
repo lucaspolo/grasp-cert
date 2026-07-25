@@ -22,6 +22,34 @@ export async function sendPasswordResetEmail(email: string, token: string) {
   });
 }
 
+/**
+ * Aviso de troca de e-mail enviado ao endereço ANTIGO — permite ao dono
+ * legítimo reagir caso a alteração tenha vindo de uma sessão sequestrada.
+ */
+export async function sendEmailChangeNotice(
+  oldEmail: string,
+  newEmail: string,
+  callsign: string
+) {
+  const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/esqueci-minha-senha`;
+
+  const from = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+
+  await resend.emails.send({
+    from,
+    to: oldEmail,
+    subject: "Seu e-mail foi alterado — GRASP Cert",
+    html: `
+      <h2>Alteração de e-mail</h2>
+      <p>O e-mail da conta <strong>${callsign}</strong> no GRASP Cert foi alterado
+      de ${oldEmail} para <strong>${newEmail}</strong>.</p>
+      <p>Se foi você, nenhuma ação é necessária.</p>
+      <p>Se você não reconhece esta alteração, redefina sua senha imediatamente:</p>
+      <p><a href="${resetLink}">${resetLink}</a></p>
+    `,
+  });
+}
+
 export async function sendVerificationEmail(email: string, token: string) {
   const verifyLink = `${process.env.NEXT_PUBLIC_APP_URL}/verificar-email?token=${token}`;
 

@@ -59,6 +59,8 @@ function LoginForm() {
           setError("");
         } else if (result.code === "EMAIL_NOT_VERIFIED") {
           setError("E-mail não verificado. Verifique sua caixa de entrada para ativar sua conta.");
+        } else if (result.code === "RATE_LIMITED") {
+          setError("Muitas tentativas de login. Aguarde alguns minutos e tente novamente.");
         } else {
           setError("Indicativo ou senha inválidos");
         }
@@ -88,6 +90,8 @@ function LoginForm() {
       if (result?.error) {
         if (result.code === "INVALID_2FA") {
           setError("Código de verificação inválido. Tente novamente.");
+        } else if (result.code === "RATE_LIMITED") {
+          setError("Muitas tentativas. Aguarde alguns minutos e tente novamente.");
         } else {
           setError("Não foi possível concluir o login. Tente novamente.");
         }

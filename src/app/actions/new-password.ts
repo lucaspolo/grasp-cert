@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { hashSync } from "bcryptjs";
 
 const NewPasswordSchema = z.object({
-  password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+  password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
 });
 
 export type NewPasswordState = {
@@ -58,14 +58,17 @@ export async function newPassword(
 
   const passwordHash = hashSync(password, 10);
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { passwordHash },
-  });
-
-  await prisma.passwordResetToken.delete({
-    where: { id: existingToken.id },
-  });
+  // Quem redefine a senha após comprometimento quer derrubar tudo:
+  // sessionVersion++ invalida os JWTs ativos na próxima revalidação e a
+  // exclusão dos dispositivos confiáveis volta a exigir 2FA em todo lugar.
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, sessionVersion: { increment: 1 } },
+    }),
+    prisma.trustedDevice.deleteMany({ where: { userId: user.id } }),
+    prisma.passwordResetToken.delete({ where: { id: existingToken.id } }),
+  ]);
 
   return { success: "Senha redefinida com sucesso!" };
 }

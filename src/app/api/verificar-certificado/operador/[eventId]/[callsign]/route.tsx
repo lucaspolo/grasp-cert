@@ -6,13 +6,32 @@ import { getDefaultTemplateConfig } from "@/lib/template-config";
 import { readFileSync } from "fs";
 import { join } from "path";
 import QRCode from "qrcode";
+import { clientIpFrom, consumeRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
+// O PNG é determinístico por evento+indicativo (muda só com QSOs novos):
+// cache curto no navegador, mais longo na CDN da Vercel.
+const CERT_CACHE_CONTROL =
+  "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400";
+
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ eventId: string; callsign: string }> }
 ) {
+  // Rota pública que renderiza imagem cara (Satori) — freia abuso por IP.
+  const attempt = await consumeRateLimit({
+    key: `cert:ip:${clientIpFrom(req.headers)}`,
+    limit: 30,
+    windowSeconds: 10 * 60,
+  });
+  if (!attempt.allowed) {
+    return new Response("Too many requests", {
+      status: 429,
+      headers: { "Retry-After": String(attempt.retryAfterSeconds) },
+    });
+  }
+
   const { eventId, callsign } = await params;
   const operatorCallsign = decodeURIComponent(callsign);
 
@@ -335,6 +354,10 @@ export async function GET(
         </div>
       </div>
     ),
-    { width: 800, height: 500 }
+    {
+      width: 800,
+      height: 500,
+      headers: { "Cache-Control": CERT_CACHE_CONTROL },
+    }
   );
 }
