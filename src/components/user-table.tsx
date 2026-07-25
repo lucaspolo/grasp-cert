@@ -52,12 +52,6 @@ const ROLE_LABELS: Record<string, string> = {
   USER: "Usuário",
 };
 
-const ROLE_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
-  OWNER: "destructive",
-  ADMIN: "default",
-  OPERATOR: "secondary",
-  USER: "outline",
-};
 
 export function UserTable({ users }: { users: UserRow[] }) {
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);

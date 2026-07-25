@@ -78,6 +78,9 @@ export default async function VerificarCertificadoOperadorPage({
 
         {/* Certificate image */}
         <div className="p-4">
+          {/* PNG dinâmico gerado pela nossa API (já com Cache-Control) — o
+              otimizador do next/image só adicionaria custo sem benefício. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/api/verificar-certificado/operador/${eventId}/${encodeURIComponent(operatorCallsign)}`}
             alt="Certificado de Operador"

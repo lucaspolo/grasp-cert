@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireRole, requireEventOperator } from "@/lib/auth-utils";
+import { requireRole } from "@/lib/auth-utils";
 import { recordAudit } from "@/lib/audit";
 import { parseBRDateTime, localToUTC } from "@/lib/utils";
 import { revalidatePath } from "next/cache";

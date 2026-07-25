@@ -1,12 +1,10 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireRole, type AppRole } from "@/lib/auth-utils";
+import { requireRole } from "@/lib/auth-utils";
 import { recordAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-
-const VALID_ROLES: AppRole[] = ["OWNER", "ADMIN", "OPERATOR", "USER"];
 
 const updateRoleSchema = z.object({
   userId: z.string().uuid(),
