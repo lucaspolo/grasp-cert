@@ -165,3 +165,4 @@ make test       # Run Vitest suite
 - Mutações administrativas devem registrar auditoria via `recordAudit()` de `src/lib/audit.ts` (exceção deliberada: criação de QSO, por volume).
 - Toda função exportada em arquivo `"use server"` é um endpoint HTTP público — deve começar com `requireRole(...)` ou `auth()` (exceção deliberada e comentada: `listPublicEvents`).
 - Rate limiting usa `consumeRateLimit()` de `src/lib/rate-limit.ts` (estado no Postgres — nunca em memória, o app roda em serverless). Verificação de OTP/código de recuperação passa sempre por `verifyUserSecondFactor()` de `src/lib/second-factor.ts`, que aplica rate limit, anti-replay e criptografia do secret.
+- O build roda migrações via `scripts/migrate-deploy.sh`, que usa a conexão DIRETA (`DATABASE_URL_UNPOOLED`) quando existe: o advisory lock do `prisma migrate deploy` não funciona através do pooler do Neon (lock fica preso → P1002 nos deploys seguintes). Não trocar de volta para o pooler.
