@@ -1,6 +1,7 @@
 import { getEvent } from "@/app/actions/event";
 import { listQSOsByEvent } from "@/app/actions/qso";
 import { QSOForm } from "@/components/qso-form";
+import { QSOImport } from "@/components/qso-import";
 import { QSOTable } from "@/components/qso-table";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/auth";
@@ -42,16 +43,24 @@ export default async function QSOsPage({
             {qsos.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <Link href="/admin/events">
-          <Button variant="outline">Voltar</Button>
-        </Link>
+        <div className="flex gap-2">
+          <a href={`/api/events/${id}/adif`} download>
+            <Button variant="outline">Exportar ADIF</Button>
+          </a>
+          <Link href="/admin/events">
+            <Button variant="outline">Voltar</Button>
+          </Link>
+        </div>
       </div>
 
-      <QSOForm
-        eventId={id}
-        eventBands={event.eventBands.map((eb) => eb.band)}
-        eventModes={event.eventModes.map((em) => em.mode)}
-      />
+      <div className="grid gap-4 md:grid-cols-2">
+        <QSOForm
+          eventId={id}
+          eventBands={event.eventBands.map((eb) => eb.band)}
+          eventModes={event.eventModes.map((em) => em.mode)}
+        />
+        <QSOImport eventId={id} />
+      </div>
 
       <div className="mt-6">
         <QSOTable qsos={qsos} eventId={id} showDelete={canDelete} />
