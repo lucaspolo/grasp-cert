@@ -204,3 +204,69 @@ export async function listPublicEvents() {
     },
   });
 }
+
+export type PublicEventStats = {
+  id: string;
+  name: string;
+  startDate: Date;
+  endDate: Date;
+  observations: string | null;
+  bands: string[];
+  modes: string[];
+  totalQsos: number;
+  participants: number;
+  ranking: { callsign: string; qsos: number }[];
+};
+
+const RANKING_SIZE = 20;
+
+/**
+ * Estatísticas públicas de um evento (sem login). Expõe SOMENTE dados
+ * públicos: nome/período/faixas/modos e observações do evento (já visíveis
+ * na home), mais agregados de QSO (total, participantes distintos, ranking
+ * por indicativo). Nunca retorna observações de QSO nem dados de conta
+ * (e-mail, cidade). Agregações via count/groupBy — sem N+1.
+ */
+export async function getPublicEventStats(
+  eventId: string
+): Promise<PublicEventStats | null> {
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: {
+      id: true,
+      name: true,
+      startDate: true,
+      endDate: true,
+      observations: true,
+      eventBands: { include: { band: true } },
+      eventModes: { include: { mode: true } },
+    },
+  });
+  if (!event) return null;
+
+  const [totalQsos, grouped] = await Promise.all([
+    prisma.qSO.count({ where: { eventId } }),
+    prisma.qSO.groupBy({
+      by: ["participantCallsign"],
+      where: { eventId },
+      _count: { participantCallsign: true },
+      orderBy: { _count: { participantCallsign: "desc" } },
+    }),
+  ]);
+
+  return {
+    id: event.id,
+    name: event.name,
+    startDate: event.startDate,
+    endDate: event.endDate,
+    observations: event.observations,
+    bands: event.eventBands.map((eb) => eb.band.label),
+    modes: event.eventModes.map((em) => em.mode.label),
+    totalQsos,
+    participants: grouped.length,
+    ranking: grouped.slice(0, RANKING_SIZE).map((g) => ({
+      callsign: g.participantCallsign,
+      qsos: g._count.participantCallsign,
+    })),
+  };
+}
