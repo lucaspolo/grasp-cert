@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import Link from "next/link";
 import { trustCurrentDevice } from "@/app/actions/two-factor";
+import { resendVerificationEmail } from "@/app/actions/verify-email";
 
 function LoginForm() {
   const router = useRouter();
@@ -28,6 +29,9 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [remember, setRemember] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resendMsg, setResendMsg] = useState("");
+  const [resendPending, setResendPending] = useState(false);
 
   async function finishLogin() {
     if (remember) {
@@ -41,10 +45,27 @@ function LoginForm() {
     router.refresh();
   }
 
+  async function handleResend() {
+    setResendPending(true);
+    setResendMsg("");
+    try {
+      const formData = new FormData();
+      formData.set("callsign", callsign.toUpperCase());
+      const result = await resendVerificationEmail({}, formData);
+      setResendMsg(result.error ?? result.success ?? "");
+    } catch {
+      setResendMsg("Não foi possível reenviar agora. Tente novamente.");
+    } finally {
+      setResendPending(false);
+    }
+  }
+
   async function handleCredentialsSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPending(true);
     setError("");
+    setNeedsVerification(false);
+    setResendMsg("");
 
     try {
       const result = await signIn("credentials", {
@@ -59,6 +80,7 @@ function LoginForm() {
           setError("");
         } else if (result.code === "EMAIL_NOT_VERIFIED") {
           setError("E-mail não verificado. Verifique sua caixa de entrada para ativar sua conta.");
+          setNeedsVerification(true);
         } else if (result.code === "RATE_LIMITED") {
           setError("Muitas tentativas de login. Aguarde alguns minutos e tente novamente.");
         } else {
@@ -128,6 +150,25 @@ function LoginForm() {
           {step === "credentials" ? (
             <form onSubmit={handleCredentialsSubmit} className="space-y-4">
               {error && <p className="text-sm text-destructive">{error}</p>}
+
+              {needsVerification && (
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResend}
+                    disabled={resendPending}
+                  >
+                    {resendPending
+                      ? "Reenviando..."
+                      : "Reenviar e-mail de verificação"}
+                  </Button>
+                  {resendMsg && (
+                    <p className="text-sm text-muted-foreground">{resendMsg}</p>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="callsign">Indicativo</Label>
