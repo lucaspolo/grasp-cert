@@ -1,9 +1,10 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import QRCode from "qrcode";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { describeUserAgent } from "@/lib/user-agent";
 import {
   TRUSTED_DEVICE_COOKIE,
   TRUSTED_DEVICE_MAX_AGE_SECONDS,
@@ -203,9 +204,10 @@ export async function trustCurrentDevice(): Promise<SimpleResult> {
 
   const token = generateDeviceToken();
   const expires = new Date(Date.now() + TRUSTED_DEVICE_MAX_AGE_SECONDS * 1000);
+  const label = describeUserAgent((await headers()).get("user-agent") ?? "");
 
   await prisma.trustedDevice.create({
-    data: { userId: user.id, tokenHash: hashDeviceToken(token), expires },
+    data: { userId: user.id, tokenHash: hashDeviceToken(token), expires, label },
   });
 
   const cookieStore = await cookies();
@@ -228,6 +230,76 @@ export async function revokeTrustedDevices(): Promise<SimpleResult> {
 
   const cookieStore = await cookies();
   cookieStore.delete(TRUSTED_DEVICE_COOKIE);
+
+  return { ok: true };
+}
+
+export type TrustedDeviceInfo = {
+  id: string;
+  label: string | null;
+  lastUsedAt: Date | null;
+  expires: Date;
+  current: boolean;
+};
+
+/**
+ * Lista os dispositivos confiáveis (não expirados) do usuário. Nunca retorna
+ * o `tokenHash`; ele é usado apenas internamente para marcar qual linha é o
+ * dispositivo atual (o que carrega o cookie desta sessão).
+ */
+export async function listTrustedDevices(): Promise<TrustedDeviceInfo[]> {
+  const user = await requireUser();
+  if (!user) return [];
+
+  const devices = await prisma.trustedDevice.findMany({
+    where: { userId: user.id, expires: { gt: new Date() } },
+    orderBy: { lastUsedAt: "desc" },
+    select: {
+      id: true,
+      label: true,
+      lastUsedAt: true,
+      expires: true,
+      tokenHash: true,
+    },
+  });
+
+  const cookieStore = await cookies();
+  const currentToken = cookieStore.get(TRUSTED_DEVICE_COOKIE)?.value;
+  const currentHash = currentToken ? hashDeviceToken(currentToken) : null;
+
+  return devices.map(({ tokenHash, ...device }) => ({
+    ...device,
+    current: currentHash !== null && tokenHash === currentHash,
+  }));
+}
+
+/**
+ * Revoga um dispositivo confiável específico do próprio usuário. O escopo
+ * `userId` no delete impede revogar dispositivo de outra conta. Se o
+ * dispositivo revogado for o atual, o cookie desta sessão também é limpo
+ * (o próximo login volta a exigir OTP).
+ */
+export async function revokeTrustedDevice(
+  deviceId: string
+): Promise<SimpleResult> {
+  const user = await requireUser();
+  if (!user) return { ok: false, error: "Não autenticado." };
+
+  const device = await prisma.trustedDevice.findFirst({
+    where: { id: deviceId, userId: user.id },
+    select: { id: true, tokenHash: true },
+  });
+  if (!device) {
+    return { ok: false, error: "Dispositivo não encontrado." };
+  }
+
+  await prisma.trustedDevice.delete({ where: { id: device.id } });
+
+  const cookieStore = await cookies();
+  const currentToken = cookieStore.get(TRUSTED_DEVICE_COOKIE)?.value;
+  if (currentToken && hashDeviceToken(currentToken) === device.tokenHash) {
+    cookieStore.delete(TRUSTED_DEVICE_COOKIE);
+  }
 
   return { ok: true };
 }

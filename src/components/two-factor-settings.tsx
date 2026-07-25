@@ -18,11 +18,15 @@ import {
   confirmTwoFactorSetup,
   disableTwoFactor,
   getTwoFactorStatus,
+  listTrustedDevices,
   regenerateRecoveryCodes,
+  revokeTrustedDevice,
   revokeTrustedDevices,
   startTwoFactorSetup,
+  type TrustedDeviceInfo,
   type TwoFactorStatus,
 } from "@/app/actions/two-factor";
+import { LocalDateTime } from "@/components/local-datetime";
 
 type Phase = "idle" | "setup" | "recovery";
 
@@ -55,6 +59,7 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
 
 export function TwoFactorSettings() {
   const [status, setStatus] = useState<TwoFactorStatus | null>(null);
+  const [devices, setDevices] = useState<TrustedDeviceInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [phase, setPhase] = useState<Phase>("idle");
   const [pending, startTransition] = useTransition();
@@ -70,16 +75,25 @@ export function TwoFactorSettings() {
   const [showRegen, setShowRegen] = useState(false);
 
   async function refresh() {
-    const data = await getTwoFactorStatus();
+    const [data, deviceList] = await Promise.all([
+      getTwoFactorStatus(),
+      listTrustedDevices(),
+    ]);
     setStatus(data);
+    setDevices(deviceList);
     setLoading(false);
   }
 
   useEffect(() => {
-    getTwoFactorStatus().then((data) => {
-      setStatus(data);
-      setLoading(false);
-    });
+    // setState dentro do .then() (não síncrono no efeito) — evita a regra
+    // react-hooks/set-state-in-effect. refresh() é reusado pelos handlers.
+    Promise.all([getTwoFactorStatus(), listTrustedDevices()]).then(
+      ([data, deviceList]) => {
+        setStatus(data);
+        setDevices(deviceList);
+        setLoading(false);
+      }
+    );
   }, []);
 
   function handleStart() {
@@ -154,6 +168,18 @@ export function TwoFactorSettings() {
         return;
       }
       toast.success("Dispositivos confiáveis revogados.");
+      await refresh();
+    });
+  }
+
+  function handleRevokeDevice(deviceId: string) {
+    startTransition(async () => {
+      const result = await revokeTrustedDevice(deviceId);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Dispositivo revogado.");
       await refresh();
     });
   }
@@ -254,23 +280,69 @@ export function TwoFactorSettings() {
 
         {!loading && phase === "idle" && status?.enabled && (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              {status.trustedDevices > 0
-                ? `Você tem ${status.trustedDevices} dispositivo(s) confiável(is) que não pedem código por 30 dias.`
-                : "Nenhum dispositivo confiável no momento."}
-            </p>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Dispositivos confiáveis</p>
+              <p className="text-xs text-muted-foreground">
+                Dispositivos confiáveis não pedem código por 30 dias.
+              </p>
 
-            {status.trustedDevices > 0 && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleRevokeDevices}
-                disabled={pending}
-              >
-                Revogar dispositivos confiáveis
-              </Button>
-            )}
+              {devices.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum dispositivo confiável no momento.
+                </p>
+              ) : (
+                <ul className="divide-y rounded-md border">
+                  {devices.map((device) => (
+                    <li
+                      key={device.id}
+                      className="flex items-center justify-between gap-3 p-3"
+                    >
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm">
+                            {device.label ?? "Dispositivo desconhecido"}
+                          </span>
+                          {device.current && (
+                            <Badge variant="secondary">Este dispositivo</Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {device.lastUsedAt ? (
+                            <>
+                              Último uso:{" "}
+                              <LocalDateTime date={device.lastUsedAt} showTime />
+                            </>
+                          ) : (
+                            "Nunca usado para pular o código"
+                          )}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRevokeDevice(device.id)}
+                        disabled={pending}
+                      >
+                        Revogar
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {devices.length > 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRevokeDevices}
+                  disabled={pending}
+                >
+                  Revogar todos
+                </Button>
+              )}
+            </div>
 
             <hr />
 
