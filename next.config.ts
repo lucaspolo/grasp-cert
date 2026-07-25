@@ -28,10 +28,11 @@ const nextConfig: NextConfig = {
 // Upload de source maps só acontece quando SENTRY_AUTH_TOKEN existe (a
 // integração Sentry↔Vercel define org/project/token); sem ele o build
 // segue normal e os erros chegam sem stack desminificado.
+// silent: false de propósito — o log de build da Vercel é onde se confere
+// se o upload de source maps aconteceu.
 export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
-  silent: true,
-  disableLogger: true,
+  silent: false,
 });
