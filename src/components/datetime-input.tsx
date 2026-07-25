@@ -8,6 +8,11 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { format, parse, isValid } from "date-fns";
+import {
+  clampTimePart,
+  composeMaskedDateTime,
+  splitMaskedDateTime,
+} from "@/lib/time-parts";
 
 interface DateTimeInputProps {
   id?: string;
@@ -39,6 +44,13 @@ function parseDefaultValue(defaultValue: string): {
 
   const parsed = parse(display, "dd/MM/yyyy HH:mm", new Date());
   return { display, date: isValid(parsed) ? parsed : undefined };
+}
+
+/** Interpreta "dd/MM/yyyy" como Date local, ou undefined se incompleta/inválida. */
+function parseDateStr(dateStr: string): Date | undefined {
+  if (!dateStr) return undefined;
+  const parsed = parse(dateStr, "dd/MM/yyyy", new Date());
+  return isValid(parsed) ? parsed : undefined;
 }
 
 export function DateTimeInput({
@@ -73,24 +85,45 @@ export function DateTimeInput({
     }
   }, [initial.display, setValue]);
 
+  // Grava o valor combinando data + hora. A data vem do seletor ou, se ainda
+  // não escolhida, do que já está digitado no campo — assim mudar só a hora
+  // não apaga a data e vice-versa.
+  function writeValue(nextHours: string, nextMinutes: string, date?: Date) {
+    const effectiveDate = date ?? selectedDate;
+    const dateStr = effectiveDate
+      ? format(effectiveDate, "dd/MM/yyyy")
+      : splitMaskedDateTime(value).dateStr;
+    if (!dateStr) return; // sem data ainda: mantém só o estado de hora
+    setValue(composeMaskedDateTime(dateStr, nextHours, nextMinutes));
+  }
+
+  // Ao abrir o seletor, semeia data/hora a partir do que já está no campo.
+  function handleOpenChange(next: boolean) {
+    if (next) {
+      const parts = splitMaskedDateTime(value);
+      setSelectedDate(parseDateStr(parts.dateStr));
+      setHours(parts.hh);
+      setMinutes(parts.mm);
+    }
+    setOpen(next);
+  }
+
   function handleDateSelect(date: Date | undefined) {
     if (!date) return;
     setSelectedDate(date);
-    const formatted = format(date, "dd/MM/yyyy") + ` ${hours}:${minutes}`;
-    setValue(formatted);
+    writeValue(hours, minutes, date);
   }
 
-  function handleTimeChange(newHours: string, newMinutes: string) {
-    setHours(newHours);
-    setMinutes(newMinutes);
-    if (selectedDate) {
-      const formatted = format(selectedDate, "dd/MM/yyyy") + ` ${newHours}:${newMinutes}`;
-      setValue(formatted);
-    }
+  function handleHoursChange(raw: string) {
+    const next = clampTimePart(raw, 23);
+    setHours(next);
+    writeValue(next, minutes);
   }
 
-  function handleConfirm() {
-    setOpen(false);
+  function handleMinutesChange(raw: string) {
+    const next = clampTimePart(raw, 59);
+    setMinutes(next);
+    writeValue(hours, next);
   }
 
   return (
@@ -104,7 +137,7 @@ export function DateTimeInput({
         className="flex-1"
       />
       <input type="hidden" name={name} value={value} />
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger
           render={
             <Button
@@ -126,27 +159,29 @@ export function DateTimeInput({
           <div className="border-t px-4 py-3 flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Hora:</span>
             <Input
-              type="number"
-              min={0}
-              max={23}
+              type="text"
+              inputMode="numeric"
+              maxLength={2}
+              aria-label="Hora"
               value={hours}
-              onChange={(e) => handleTimeChange(e.target.value.padStart(2, "0"), minutes)}
+              onChange={(e) => handleHoursChange(e.target.value)}
               className="w-16 text-center"
             />
             <span className="text-sm">:</span>
             <Input
-              type="number"
-              min={0}
-              max={59}
+              type="text"
+              inputMode="numeric"
+              maxLength={2}
+              aria-label="Minuto"
               value={minutes}
-              onChange={(e) => handleTimeChange(hours, e.target.value.padStart(2, "0"))}
+              onChange={(e) => handleMinutesChange(e.target.value)}
               className="w-16 text-center"
             />
             <Button
               type="button"
               size="sm"
               className="ml-auto"
-              onClick={handleConfirm}
+              onClick={() => setOpen(false)}
             >
               OK
             </Button>
