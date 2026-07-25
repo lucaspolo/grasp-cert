@@ -32,6 +32,7 @@ export default auth((req) => {
     pathname.startsWith("/nova-senha") ||
     pathname.startsWith("/verificar-email") ||
     pathname.startsWith("/verificar-certificado") ||
+    pathname.startsWith("/eventos") ||
     pathname.startsWith("/api/verificar-certificado") ||
     pathname.startsWith("/api/health") ||
     pathname.startsWith("/api/auth");

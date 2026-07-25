@@ -8,7 +8,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LocalDateTime } from "@/components/local-datetime";
-import { Calendar, Radio } from "lucide-react";
+import { Calendar, Radio, BarChart3 } from "lucide-react";
+import Link from "next/link";
 
 export default async function Home() {
   const events = await listPublicEvents();
@@ -100,6 +101,13 @@ function EventCard({
         {event.observations && (
           <p className="text-sm text-muted-foreground">{event.observations}</p>
         )}
+        <Link
+          href={`/eventos/${event.id}`}
+          className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+        >
+          <BarChart3 className="h-4 w-4" />
+          Ver estatísticas
+        </Link>
       </CardContent>
     </Card>
   );
