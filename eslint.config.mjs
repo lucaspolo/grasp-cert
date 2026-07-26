@@ -6,13 +6,13 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    // Renderização de ImageResponse: o JSX deste arquivo é processado pelo
-    // Satori para gerar PNG — <img> ali não vira DOM, então next/image
-    // e alt-text não se aplicam.
-    files: ["src/lib/certificate.tsx"],
+    // Desenho compartilhado do certificado: o mesmo JSX vai para o Satori
+    // (onde <img> não vira DOM) e para o preview do editor, onde as imagens
+    // são data URIs e rotas dinâmicas — next/image não se aplica em nenhum
+    // dos dois. As imagens são decorativas e já levam alt="".
+    files: ["src/lib/certificate-canvas.tsx"],
     rules: {
       "@next/next/no-img-element": "off",
-      "jsx-a11y/alt-text": "off",
     },
   },
   // Override default ignores of eslint-config-next.

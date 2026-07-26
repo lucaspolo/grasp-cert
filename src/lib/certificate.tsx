@@ -7,9 +7,19 @@ import { prisma } from "@/lib/prisma";
 import { mergeTemplateConfig, type TemplateConfig } from "@/lib/template-config";
 import { certificateSerial } from "@/lib/certificate-serial";
 import type { CertificateKind } from "@/lib/certificate-kind";
+import {
+  CertificateCanvas,
+  CERTIFICATE_FONT_FAMILY,
+} from "@/lib/certificate-canvas";
+import {
+  CERTIFICATE_HEIGHT,
+  CERTIFICATE_WIDTH,
+} from "@/lib/certificate-dimensions";
 
-export const CERTIFICATE_WIDTH = 800;
-export const CERTIFICATE_HEIGHT = 500;
+export {
+  CERTIFICATE_WIDTH,
+  CERTIFICATE_HEIGHT,
+} from "@/lib/certificate-dimensions";
 
 // O certificado é determinístico por evento+indicativo (muda só com QSOs novos):
 // cache curto no navegador, mais longo na CDN da Vercel.
@@ -136,6 +146,36 @@ export async function loadCertificateData(
   };
 }
 
+/**
+ * A mesma face que o Satori já usava por padrão, agora registrada de forma
+ * explícita para que o navegador possa carregar o binário idêntico via
+ * @font-face — sem isso o editor mede o texto numa fonte e o certificado sai
+ * em outra. Verificado: registrar assim gera PNG byte a byte igual.
+ */
+let cachedFont: Buffer | null = null;
+
+function certificateFonts() {
+  try {
+    cachedFont ??= readFileSync(
+      join(process.cwd(), "public", "fonts", "geist-regular.ttf")
+    );
+  } catch {
+    // Sem o arquivo, o Satori cai na face embutida. Devolver [] NÃO serve:
+    // o bundle faz `fonts || defaultFonts` e um array vazio é truthy, o que
+    // derruba o render com "No fonts are loaded".
+    return undefined;
+  }
+
+  return [
+    {
+      name: CERTIFICATE_FONT_FAMILY,
+      data: cachedFont,
+      weight: 400 as const,
+      style: "normal" as const,
+    },
+  ];
+}
+
 /** Marca d'água usada só quando o template não tem imagem de fundo própria. */
 function loadWatermark(): string | null {
   try {
@@ -204,276 +244,59 @@ export async function renderCertificatePdf(
   });
 }
 
+/** Texto de cada campo posicionável, na chave usada em `config.fields`. */
+export function certificateValues(data: CertificateData): Record<string, string> {
+  const labels = LABELS[data.kind];
+  const plural = data.qsoCount !== 1 ? "s" : "";
+
+  return {
+    eventName: data.eventName,
+    participantCallsign: data.callsign.toUpperCase(),
+    participantName: data.personName,
+    eventDate: `${data.eventStartStr} — ${data.eventEndStr}`,
+    qsoInfo: `Modos: ${data.modes.join(", ")} · Faixas: ${data.bands.join(", ")}`,
+    qsoDateTime: `${labels.role} · ${data.qsoCount} QSO${plural} realizado${plural}`,
+    serial: `Nº ${data.serial}`,
+  };
+}
+
 export async function renderCertificate(
   data: CertificateData,
   init?: { headers?: Record<string, string>; scale?: number }
 ): Promise<ImageResponse> {
-  const { config, bgDataUri, verifyUrl } = data;
-  const fields = config.fields;
-  const hasCustomBg = !!bgDataUri;
-  const labels = LABELS[data.kind];
-  const watermarkDataUri = hasCustomBg ? null : loadWatermark();
-
+  const hasCustomBg = !!data.bgDataUri;
   // O layout é sempre escrito em 800×500; a escala só amplia o raster de saída
   // (o PDF usa isso para não sair serrilhado ao dar zoom ou imprimir).
   const scale = init?.scale ?? 1;
 
-  const qrSvg = await QRCode.toString(verifyUrl, {
+  const fonts = certificateFonts();
+
+  const qrSvg = await QRCode.toString(data.verifyUrl, {
     type: "svg",
     width: 100 * scale,
     margin: 1,
     errorCorrectionLevel: "M",
     color: { dark: "#000000", light: "#ffffff" },
   });
-  const qrDataUrl = `data:image/svg+xml,${encodeURIComponent(qrSvg)}`;
 
   return new ImageResponse(
     (
-      <div
-        style={{
-          width: CERTIFICATE_WIDTH,
-          height: CERTIFICATE_HEIGHT,
-          display: "flex",
-          position: "relative",
-          transform: `scale(${scale})`,
-          transformOrigin: "top left",
-          // Longhand obrigatório: o Satori não parseia o shorthand `background`
-          // com data URI — lança InvalidCharacterError e aborta o stream.
-          ...(bgDataUri
-            ? {
-                backgroundImage: `url(${bgDataUri})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }
-            : {
-                backgroundImage:
-                  "linear-gradient(135deg, #fef9c3 0%, #fef08a 100%)",
-              }),
-          fontFamily: "sans-serif",
-        }}
-      >
-        {/* Watermark logo — only when no custom background */}
-        {!hasCustomBg && watermarkDataUri && (
-          <img
-            src={watermarkDataUri}
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: 300,
-              height: 300,
-              objectFit: "contain",
-              opacity: 0.15,
-            }}
-          />
-        )}
-
-        {/* Decorative border — only when no custom background */}
-        {!hasCustomBg && (
-          <div
-            style={{
-              position: "absolute",
-              top: 12,
-              left: 12,
-              right: 12,
-              bottom: 12,
-              border: "2px solid rgba(146, 64, 14, 0.3)",
-              borderRadius: 12,
-              display: "flex",
-            }}
-          />
-        )}
-
-        {/* Header badge */}
-        {!hasCustomBg && (
-          <div
-            style={{
-              position: "absolute",
-              top: 24,
-              left: 0,
-              right: 0,
-              display: "flex",
-              justifyContent: "center",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 14,
-                color: "#92400e",
-                letterSpacing: 4,
-                textTransform: "uppercase",
-              }}
-            >
-              {labels.badge}
-            </span>
-          </div>
-        )}
-
-        {/* Event name */}
-        <span
-          style={{
-            position: "absolute",
-            left: fields.eventName.x,
-            top: fields.eventName.y,
-            fontSize: fields.eventName.fontSize,
-            color:
-              !hasCustomBg && fields.eventName.color === "#1a1a1a"
-                ? "#1a1a1a"
-                : fields.eventName.color,
-            fontWeight: 700,
-            transform: "translateX(-50%)",
-            textAlign: "center",
-            display: "flex",
-          }}
-        >
-          {data.eventName}
-        </span>
-
-        {/* Callsign */}
-        <span
-          style={{
-            position: "absolute",
-            left: fields.participantCallsign.x,
-            top: fields.participantCallsign.y,
-            fontSize: fields.participantCallsign.fontSize,
-            color:
-              !hasCustomBg && fields.participantCallsign.color === "#0f172a"
-                ? "#92400e"
-                : fields.participantCallsign.color,
-            fontWeight: 700,
-            transform: "translateX(-50%)",
-            display: "flex",
-          }}
-        >
-          {data.callsign.toUpperCase()}
-        </span>
-
-        {/* Name */}
-        <span
-          style={{
-            position: "absolute",
-            left: fields.participantName.x,
-            top: fields.participantName.y,
-            fontSize: fields.participantName.fontSize,
-            color:
-              !hasCustomBg && fields.participantName.color === "#334155"
-                ? "#334155"
-                : fields.participantName.color,
-            transform: "translateX(-50%)",
-            display: "flex",
-          }}
-        >
-          {data.personName}
-        </span>
-
-        {/* Event date range */}
-        <span
-          style={{
-            position: "absolute",
-            left: fields.eventDate.x,
-            top: fields.eventDate.y,
-            fontSize: fields.eventDate.fontSize,
-            color:
-              !hasCustomBg && fields.eventDate.color === "#475569"
-                ? "#475569"
-                : fields.eventDate.color,
-            transform: "translateX(-50%)",
-            display: "flex",
-          }}
-        >
-          {data.eventStartStr} — {data.eventEndStr}
-        </span>
-
-        {/* Modes and bands */}
-        <span
-          style={{
-            position: "absolute",
-            left: fields.qsoInfo.x,
-            top: fields.qsoInfo.y,
-            fontSize: fields.qsoInfo.fontSize,
-            color:
-              !hasCustomBg && fields.qsoInfo.color === "#475569"
-                ? "#475569"
-                : fields.qsoInfo.color,
-            transform: "translateX(-50%)",
-            display: "flex",
-          }}
-        >
-          Modos: {data.modes.join(", ")} · Faixas: {data.bands.join(", ")}
-        </span>
-
-        {/* QSO count */}
-        <span
-          style={{
-            position: "absolute",
-            left: fields.qsoDateTime.x,
-            top: fields.qsoDateTime.y,
-            fontSize: fields.qsoDateTime.fontSize,
-            color:
-              !hasCustomBg && fields.qsoDateTime.color === "#475569"
-                ? "#475569"
-                : fields.qsoDateTime.color,
-            transform: "translateX(-50%)",
-            display: "flex",
-          }}
-        >
-          {labels.role} · {data.qsoCount} QSO{data.qsoCount !== 1 ? "s" : ""}{" "}
-          realizado{data.qsoCount !== 1 ? "s" : ""}
-        </span>
-
-        {/* Serial number — alinhado à esquerda a partir de x, sem o
-            translateX(-50%) dos campos centralizados */}
-        <span
-          style={{
-            position: "absolute",
-            left: fields.serial.x,
-            top: fields.serial.y,
-            fontSize: fields.serial.fontSize,
-            color: fields.serial.color,
-            display: "flex",
-          }}
-        >
-          Nº {data.serial}
-        </span>
-
-        {/* QR Code — bottom right */}
-        <img
-          src={qrDataUrl}
-          style={{
-            position: "absolute",
-            bottom: 12,
-            right: 12,
-            width: 100,
-            height: 100,
-          }}
-        />
-
-        {/* Footer — verification URL */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 20,
-            left: 0,
-            right: 0,
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
-          <span
-            style={{
-              fontSize: 10,
-              color: hasCustomBg ? "#666" : "#78716c",
-            }}
-          >
-            {verifyUrl}
-          </span>
-        </div>
-      </div>
+      <CertificateCanvas
+        config={data.config}
+        values={certificateValues(data)}
+        badge={LABELS[data.kind].badge}
+        verifyUrl={data.verifyUrl}
+        bgSrc={data.bgDataUri}
+        qrSrc={`data:image/svg+xml,${encodeURIComponent(qrSvg)}`}
+        watermarkSrc={hasCustomBg ? null : loadWatermark()}
+        scale={scale}
+      />
     ),
     {
       width: CERTIFICATE_WIDTH * scale,
       height: CERTIFICATE_HEIGHT * scale,
+      // Omitir a chave quando não há fonte própria — nunca passar [].
+      ...(fonts ? { fonts } : {}),
       ...(init?.headers ? { headers: init.headers } : {}),
     }
   );
