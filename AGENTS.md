@@ -80,7 +80,7 @@ QSO (qsos)          ───────*┘─────┘  (cascade delete
 - Número de série determinístico em `src/lib/certificate-serial.ts`: HMAC de tipo + evento + indicativo com salt fixo. Alterar o salt ou o algoritmo renumera certificados já emitidos — há teste travando o valor.
 - Background: template's blob image converted to base64 data URI, or default blue gradient.
 - Template fields are positioned via `TemplateConfig` JSON (x, y, fontSize, color per field). Config vinda do banco passa sempre por `mergeTemplateConfig()`, que completa campos ausentes com os defaults (templates salvos antes de um campo novo existir).
-- Falls back to the seeded "Padrão" template if the event has no template assigned.
+- Falls back to the seeded "Padrão" template if the event has no template assigned. Esse fallback é resolvido **por nome**, então `updateTemplateName` e `deleteTemplate` recusam mexer no "Padrão" — renomeá-lo ou excluí-lo derrubaria o certificado de todo evento sem template próprio. `Template.name` não é `@unique`, então a guarda é por código, não pelo banco.
 
 ### Template Management
 - Templates have dedicated CRUD at `/admin/templates`.

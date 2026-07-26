@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import sharp from "sharp";
+import { Prisma } from "@prisma/client";
 import type { TemplateConfig } from "@/lib/template-config";
 import {
   CERTIFICATE_HEIGHT,
@@ -34,6 +35,21 @@ const templateConfigSchema = z.object({
 const templateNameSchema = z.object({
   name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres").max(100),
 });
+
+/**
+ * Nome do template usado como fallback global: `loadCertificateData` o procura
+ * por nome quando o evento não tem template. Renomeá-lo ou excluí-lo derruba o
+ * certificado de todo evento sem template — daí as guardas abaixo.
+ */
+const FALLBACK_TEMPLATE_NAME = "Padrão";
+
+/** Registro sumiu entre a leitura e a escrita (P2025). */
+function isMissingRecord(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2025"
+  );
+}
 
 export type TemplateFormState = {
   errors?: Record<string, string[]>;
@@ -118,10 +134,27 @@ export async function updateTemplateName(
     select: { name: true },
   });
 
-  await prisma.template.update({
-    where: { id: templateId },
-    data: { name: parsed.data.name },
-  });
+  if (previous?.name === FALLBACK_TEMPLATE_NAME) {
+    return {
+      errors: {
+        name: [
+          `O template "${FALLBACK_TEMPLATE_NAME}" é o padrão usado por eventos sem template e não pode ser renomeado.`,
+        ],
+      },
+    };
+  }
+
+  try {
+    await prisma.template.update({
+      where: { id: templateId },
+      data: { name: parsed.data.name },
+    });
+  } catch (error) {
+    if (isMissingRecord(error)) {
+      return { errors: { name: ["Template não encontrado."] } };
+    }
+    throw error;
+  }
 
   await recordAudit(session.user, {
     action: "template.renamed",
@@ -148,13 +181,26 @@ export async function deleteTemplate(templateId: string) {
     return { error: "Template não encontrado." };
   }
 
+  if (template.name === FALLBACK_TEMPLATE_NAME) {
+    return {
+      error: `O template "${FALLBACK_TEMPLATE_NAME}" é usado por todo evento sem template próprio e não pode ser excluído.`,
+    };
+  }
+
   if (template._count.events > 0) {
     return {
       error: `Não é possível excluir — ${template._count.events} evento(s) usam este template.`,
     };
   }
 
-  await prisma.template.delete({ where: { id: templateId } });
+  try {
+    await prisma.template.delete({ where: { id: templateId } });
+  } catch (error) {
+    if (isMissingRecord(error)) {
+      return { error: "Template não encontrado." };
+    }
+    throw error;
+  }
 
   await recordAudit(session.user, {
     action: "template.deleted",
@@ -228,14 +274,22 @@ export async function uploadTemplateBg(templateId: string, formData: FormData) {
   );
   const mimeType = `image/${format}`;
 
-  const template = await prisma.template.update({
-    where: { id: templateId },
-    data: {
-      bgImage: reencoded,
-      bgMimeType: mimeType,
-    },
-    select: { name: true },
-  });
+  let template;
+  try {
+    template = await prisma.template.update({
+      where: { id: templateId },
+      data: {
+        bgImage: reencoded,
+        bgMimeType: mimeType,
+      },
+      select: { name: true },
+    });
+  } catch (error) {
+    if (isMissingRecord(error)) {
+      return { error: "Template não encontrado." };
+    }
+    throw error;
+  }
 
   await recordAudit(session.user, {
     action: "template.bg_uploaded",
@@ -248,6 +302,35 @@ export async function uploadTemplateBg(templateId: string, formData: FormData) {
       width: metadata.width,
       height: metadata.height,
     },
+  });
+
+  revalidatePath(`/admin/templates/${templateId}/edit`);
+  return { success: true };
+}
+
+/** Volta o template ao fundo padrão. Sem isso, subir uma arte é irreversível. */
+export async function clearTemplateBg(templateId: string) {
+  const session = await requireRole(["OWNER", "ADMIN"]);
+
+  let template;
+  try {
+    template = await prisma.template.update({
+      where: { id: templateId },
+      data: { bgImage: null, bgMimeType: null },
+      select: { name: true },
+    });
+  } catch (error) {
+    if (isMissingRecord(error)) {
+      return { error: "Template não encontrado." };
+    }
+    throw error;
+  }
+
+  await recordAudit(session.user, {
+    action: "template.bg_cleared",
+    entityType: "template",
+    entityId: templateId,
+    summary: `Imagem de fundo do template ${template.name} removida`,
   });
 
   revalidatePath(`/admin/templates/${templateId}/edit`);
@@ -270,11 +353,19 @@ export async function saveTemplateConfig(
     };
   }
 
-  const template = await prisma.template.update({
-    where: { id: templateId },
-    data: { config: parsed.data },
-    select: { name: true },
-  });
+  let template;
+  try {
+    template = await prisma.template.update({
+      where: { id: templateId },
+      data: { config: parsed.data },
+      select: { name: true },
+    });
+  } catch (error) {
+    if (isMissingRecord(error)) {
+      return { error: "Template não encontrado." };
+    }
+    throw error;
+  }
 
   await recordAudit(session.user, {
     action: "template.config_updated",
