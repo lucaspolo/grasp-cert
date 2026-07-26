@@ -161,14 +161,23 @@ export function certificateFilename(
 }
 
 /**
- * Embute o PNG já renderizado numa página de PDF do mesmo tamanho — o PDF sai
- * idêntico ao PNG, sem reimplementar o layout do certificado.
+ * Fator de resolução do PDF: o certificado é rasterizado em 3× e desenhado na
+ * página de 800×500pt, dando ~216 DPI. Sem isso o texto sai serrilhado ao dar
+ * zoom ou imprimir, já que no PDF ele é imagem, não vetor.
+ */
+const PDF_SCALE = 3;
+
+/**
+ * Embute o certificado rasterizado numa página do mesmo tamanho — mesmo layout
+ * do PNG, sem reimplementá-lo, só com mais resolução.
  */
 export async function renderCertificatePdf(
   data: CertificateData,
   init?: { headers?: Record<string, string> }
 ): Promise<Response> {
-  const png = await (await renderCertificate(data)).arrayBuffer();
+  const png = await (
+    await renderCertificate(data, { scale: PDF_SCALE })
+  ).arrayBuffer();
 
   const pdf = await PDFDocument.create();
   pdf.setTitle(`Certificado ${data.serial} — ${data.eventName}`);
@@ -197,7 +206,7 @@ export async function renderCertificatePdf(
 
 export async function renderCertificate(
   data: CertificateData,
-  init?: { headers?: Record<string, string> }
+  init?: { headers?: Record<string, string>; scale?: number }
 ): Promise<ImageResponse> {
   const { config, bgDataUri, verifyUrl } = data;
   const fields = config.fields;
@@ -205,9 +214,13 @@ export async function renderCertificate(
   const labels = LABELS[data.kind];
   const watermarkDataUri = hasCustomBg ? null : loadWatermark();
 
+  // O layout é sempre escrito em 800×500; a escala só amplia o raster de saída
+  // (o PDF usa isso para não sair serrilhado ao dar zoom ou imprimir).
+  const scale = init?.scale ?? 1;
+
   const qrSvg = await QRCode.toString(verifyUrl, {
     type: "svg",
-    width: 100,
+    width: 100 * scale,
     margin: 1,
     errorCorrectionLevel: "M",
     color: { dark: "#000000", light: "#ffffff" },
@@ -222,6 +235,8 @@ export async function renderCertificate(
           height: CERTIFICATE_HEIGHT,
           display: "flex",
           position: "relative",
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
           background: bgDataUri
             ? `url(${bgDataUri}) center/cover`
             : "linear-gradient(135deg, #fef9c3 0%, #fef08a 100%)",
@@ -448,8 +463,8 @@ export async function renderCertificate(
       </div>
     ),
     {
-      width: CERTIFICATE_WIDTH,
-      height: CERTIFICATE_HEIGHT,
+      width: CERTIFICATE_WIDTH * scale,
+      height: CERTIFICATE_HEIGHT * scale,
       ...(init?.headers ? { headers: init.headers } : {}),
     }
   );
