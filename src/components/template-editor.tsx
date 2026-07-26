@@ -1,16 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { uploadTemplateBg, saveTemplateConfig } from "@/app/actions/template";
 import {
   type TemplateConfig,
   type TemplateConfigField,
+  type TemplateFieldAlign,
 } from "@/lib/template-config";
 import {
   CERTIFICATE_HEIGHT,
   CERTIFICATE_WIDTH,
 } from "@/lib/certificate-dimensions";
 import { CertificateStage } from "@/components/certificate-stage";
+import { realignX } from "@/lib/stage-geometry";
 import {
   SAMPLE_BADGE,
   SAMPLE_VERIFY_URL,
@@ -30,7 +39,7 @@ import {
 import { Eye, EyeOff, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 
-const ALIGN_OPTIONS: { value: NonNullable<TemplateConfigField["align"]>; label: string }[] =
+const ALIGN_OPTIONS: { value: TemplateFieldAlign; label: string }[] =
   [
     { value: "left", label: "Esquerda" },
     { value: "center", label: "Centro" },
@@ -58,6 +67,13 @@ export function TemplateEditor({
   const [dirty, setDirty] = useState(false);
   const [uploading, startUpload] = useTransition();
   const [saving, startSave] = useTransition();
+
+  // Largura medida de cada campo, em px do certificado. Fica em ref porque só é
+  // lida sob demanda — em estado, cada medição dispararia outro render.
+  const widthsRef = useRef<Record<string, number>>({});
+  const handleMeasure = useCallback((widths: Record<string, number>) => {
+    widthsRef.current = widths;
+  }, []);
 
   const values = useMemo(() => sampleCertificateValues(kind), [kind]);
   const bgImageUrl = hasImage
@@ -102,6 +118,26 @@ export function TemplateEditor({
     setConfig((prev) => ({
       ...prev,
       fields: { ...prev.fields, [key]: { ...prev.fields[key], [prop]: value } },
+    }));
+  }
+
+  /**
+   * Trocar a âncora sem reancorar o x fazia o campo saltar: um texto
+   * centralizado em 400 virava um texto que começa em 400 e transborda.
+   */
+  function changeAlign(key: string, align: TemplateFieldAlign) {
+    const field = config.fields[key];
+    const x = realignX(
+      field.x,
+      widthsRef.current[key] ?? 0,
+      field.align ?? "center",
+      align
+    );
+
+    beginChange();
+    setConfig((prev) => ({
+      ...prev,
+      fields: { ...prev.fields, [key]: { ...prev.fields[key], align, x } },
     }));
   }
 
@@ -233,6 +269,7 @@ export function TemplateEditor({
               onSelect={setSelected}
               onMove={moveField}
               onBeginChange={beginChange}
+              onMeasure={handleMeasure}
             />
 
             <div className="space-y-4">
@@ -350,9 +387,7 @@ export function TemplateEditor({
                               ? "secondary"
                               : "ghost"
                           }
-                          onClick={() =>
-                            updateField(selected, "align", option.value)
-                          }
+                          onClick={() => changeAlign(selected, option.value)}
                         >
                           {option.label}
                         </Button>

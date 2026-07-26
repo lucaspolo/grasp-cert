@@ -34,6 +34,7 @@ export function CertificateStage({
   onSelect,
   onMove,
   onBeginChange,
+  onMeasure,
 }: {
   config: TemplateConfig;
   values: Record<string, string>;
@@ -47,7 +48,10 @@ export function CertificateStage({
   onMove: (key: string, x: number, y: number) => void;
   /** Chamado antes de cada alteração, para o desfazer guardar o estado. */
   onBeginChange: () => void;
+  /** Largura de cada campo em px do certificado — usada ao trocar a âncora. */
+  onMeasure: (widths: Record<string, number>) => void;
 }) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [boxes, setBoxes] = useState<Record<string, Box>>({});
@@ -60,9 +64,10 @@ export function CertificateStage({
     originY: number;
   } | null>(null);
 
-  // O certificado tem largura fixa; o palco encolhe junto com a coluna.
+  // A coluna é medida no wrapper; o palco em si tem exatamente o tamanho do
+  // certificado, senão as caixas de seleção transbordam para fora do papel.
   useEffect(() => {
-    const node = stageRef.current;
+    const node = wrapperRef.current;
     if (!node) return;
 
     const observer = new ResizeObserver(([entry]) => {
@@ -83,6 +88,8 @@ export function CertificateStage({
 
     const stageRect = node.getBoundingClientRect();
     const next: Record<string, Box> = {};
+    const widths: Record<string, number> = {};
+    const currentScale = stageRect.width / CERTIFICATE_WIDTH || 1;
 
     node.querySelectorAll<HTMLElement>("[data-field]").forEach((el) => {
       const key = el.dataset.field;
@@ -94,10 +101,13 @@ export function CertificateStage({
         width: rect.width,
         height: rect.height,
       };
+      // Em px do certificado, para servir de entrada ao reancorar.
+      widths[key] = rect.width / currentScale;
     });
 
     setBoxes(next);
-  }, []);
+    onMeasure(widths);
+  }, [onMeasure]);
 
   useLayoutEffect(() => {
     measure();
@@ -157,10 +167,14 @@ export function CertificateStage({
   }
 
   return (
+    <div ref={wrapperRef} className="w-full">
     <div
       ref={stageRef}
-      className="relative mx-auto w-full touch-none overflow-hidden rounded-lg border bg-muted/30 select-none"
-      style={{ height: CERTIFICATE_HEIGHT * scale }}
+      className="relative mx-auto touch-none overflow-hidden rounded-lg border select-none"
+      style={{
+        width: CERTIFICATE_WIDTH * scale,
+        height: CERTIFICATE_HEIGHT * scale,
+      }}
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) onSelect(null);
       }}
@@ -208,6 +222,7 @@ export function CertificateStage({
           }}
         />
       ))}
+    </div>
     </div>
   );
 }

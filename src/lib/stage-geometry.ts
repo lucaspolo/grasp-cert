@@ -46,6 +46,32 @@ export function dragToPosition({
   return { x, y, snapped };
 }
 
+type Align = "left" | "center" | "right";
+
+/** Distância da borda esquerda do texto até o ponto de ancoragem. */
+function anchorOffset(align: Align, width: number): number {
+  if (align === "center") return width / 2;
+  if (align === "right") return width;
+  return 0;
+}
+
+/**
+ * Recalcula o x ao trocar o alinhamento, para o texto não sair do lugar.
+ *
+ * Sem isso, o mesmo x muda de significado: um campo centralizado em 400 vira um
+ * campo que *começa* em 400 e transborda pela direita. Aqui a borda esquerda do
+ * texto é preservada e o x é reancorado.
+ */
+export function realignX(
+  x: number,
+  width: number,
+  from: Align,
+  to: Align
+): number {
+  const left = x - anchorOffset(from, width);
+  return clamp(left + anchorOffset(to, width), CERTIFICATE_WIDTH);
+}
+
 /** Deslocamento por seta do teclado — 1 px, ou 10 px com Shift. */
 export function nudgeToPosition(
   x: number,
