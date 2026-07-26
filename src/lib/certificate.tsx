@@ -237,9 +237,18 @@ export async function renderCertificate(
           position: "relative",
           transform: `scale(${scale})`,
           transformOrigin: "top left",
-          background: bgDataUri
-            ? `url(${bgDataUri}) center/cover`
-            : "linear-gradient(135deg, #fef9c3 0%, #fef08a 100%)",
+          // Longhand obrigatório: o Satori não parseia o shorthand `background`
+          // com data URI — lança InvalidCharacterError e aborta o stream.
+          ...(bgDataUri
+            ? {
+                backgroundImage: `url(${bgDataUri})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }
+            : {
+                backgroundImage:
+                  "linear-gradient(135deg, #fef9c3 0%, #fef08a 100%)",
+              }),
           fontFamily: "sans-serif",
         }}
       >
