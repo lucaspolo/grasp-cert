@@ -391,7 +391,7 @@ export function TemplateEditor({
                   </div>
 
                   <div className="space-y-1">
-                    <Label className="text-xs">Alinhamento</Label>
+                    <Label className="text-xs">Âncora no X</Label>
                     <div className="flex gap-1">
                       {ALIGN_OPTIONS.map((option) => (
                         <Button
@@ -412,6 +412,11 @@ export function TemplateEditor({
                     </div>
                   </div>
 
+                  <p className="text-xs text-muted-foreground">
+                    A âncora (losango) define que ponto do texto fica no X —
+                    trocá-la não move o texto agora, mas decide para que lado
+                    ele cresce quando o dado real for mais longo que o exemplo.
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     Setas movem 1 px, com Shift movem 10 px. O campo gruda no
                     centro do certificado.

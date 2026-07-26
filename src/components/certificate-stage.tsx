@@ -190,6 +190,25 @@ export function CertificateStage({
         scale={scale}
       />
 
+      {/* Âncora do campo selecionado: o ponto do texto que fica no x. É o único
+          retorno visual de trocar o alinhamento, já que a troca reposiciona o x
+          justamente para o texto não sair do lugar. */}
+      {selected && boxes[selected] && (
+        <div
+          className="pointer-events-none absolute flex flex-col items-center"
+          style={{
+            left: (config.fields[selected]?.x ?? 0) * scale - 4,
+            top: boxes[selected].top - 10,
+          }}
+        >
+          <div className="size-2 rotate-45 bg-amber-500" />
+          <div
+            className="w-px bg-amber-500"
+            style={{ height: boxes[selected].height + 10 }}
+          />
+        </div>
+      )}
+
       {/* Guia do centro, durante o encaixe */}
       {snapped && (
         <div
