@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { readFileSync } from "fs";
 import { join } from "path";
 import QRCode from "qrcode";
+import { PDFDocument } from "pdf-lib";
 import { prisma } from "@/lib/prisma";
 import { mergeTemplateConfig, type TemplateConfig } from "@/lib/template-config";
 import { certificateSerial } from "@/lib/certificate-serial";
@@ -143,6 +144,55 @@ function loadWatermark(): string | null {
   } catch {
     return null;
   }
+}
+
+/** Nome de arquivo do download: certificado-nome-do-evento-py2abc.ext */
+export function certificateFilename(
+  data: CertificateData,
+  extension: "png" | "pdf"
+): string {
+  const slug = data.eventName
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+  return `certificado-${slug}-${data.callsign.toLowerCase()}.${extension}`;
+}
+
+/**
+ * Embute o PNG já renderizado numa página de PDF do mesmo tamanho — o PDF sai
+ * idêntico ao PNG, sem reimplementar o layout do certificado.
+ */
+export async function renderCertificatePdf(
+  data: CertificateData,
+  init?: { headers?: Record<string, string> }
+): Promise<Response> {
+  const png = await (await renderCertificate(data)).arrayBuffer();
+
+  const pdf = await PDFDocument.create();
+  pdf.setTitle(`Certificado ${data.serial} — ${data.eventName}`);
+  pdf.setSubject(`${data.callsign.toUpperCase()} · ${data.verifyUrl}`);
+  pdf.setCreator("GRASP-CERT");
+
+  const page = pdf.addPage([CERTIFICATE_WIDTH, CERTIFICATE_HEIGHT]);
+  const image = await pdf.embedPng(png);
+  page.drawImage(image, {
+    x: 0,
+    y: 0,
+    width: CERTIFICATE_WIDTH,
+    height: CERTIFICATE_HEIGHT,
+  });
+
+  const bytes = await pdf.save();
+
+  return new Response(bytes as BodyInit, {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${certificateFilename(data, "pdf")}"`,
+      ...init?.headers,
+    },
+  });
 }
 
 export async function renderCertificate(

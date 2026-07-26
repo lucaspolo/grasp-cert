@@ -4,6 +4,7 @@ import {
   CERTIFICATE_CACHE_CONTROL,
   loadCertificateData,
   renderCertificate,
+  renderCertificatePdf,
 } from "@/lib/certificate";
 
 export const runtime = "nodejs";
@@ -35,7 +36,9 @@ export async function GET(
     });
   }
 
-  return renderCertificate(data, {
-    headers: { "Cache-Control": CERTIFICATE_CACHE_CONTROL },
-  });
+  const headers = { "Cache-Control": CERTIFICATE_CACHE_CONTROL };
+
+  return req.nextUrl.searchParams.get("format") === "pdf"
+    ? renderCertificatePdf(data, { headers })
+    : renderCertificate(data, { headers });
 }
