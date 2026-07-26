@@ -66,13 +66,19 @@ export function CertificateStage({
 
   // A coluna é medida no wrapper; o palco em si tem exatamente o tamanho do
   // certificado, senão as caixas de seleção transbordam para fora do papel.
-  useEffect(() => {
+  //
+  // A primeira medição é em layout effect, antes do paint: em useEffect o palco
+  // aparecia em 800px e encolhia um quadro depois, em telas estreitas.
+  useLayoutEffect(() => {
     const node = wrapperRef.current;
     if (!node) return;
 
-    const observer = new ResizeObserver(([entry]) => {
-      setScale(Math.min(1, entry.contentRect.width / CERTIFICATE_WIDTH));
-    });
+    const fit = (width: number) =>
+      setScale(Math.min(1, width / CERTIFICATE_WIDTH));
+
+    fit(node.getBoundingClientRect().width);
+
+    const observer = new ResizeObserver(([entry]) => fit(entry.contentRect.width));
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
