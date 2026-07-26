@@ -1,12 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { uploadTemplateBg, saveTemplateConfig } from "@/app/actions/template";
 import {
-  uploadTemplateBg,
-  saveTemplateConfig,
-} from "@/app/actions/template";
-import {
-  getDefaultTemplateConfig,
   type TemplateConfig,
   type TemplateConfigField,
 } from "@/lib/template-config";
@@ -14,7 +10,7 @@ import {
   CERTIFICATE_HEIGHT,
   CERTIFICATE_WIDTH,
 } from "@/lib/certificate-dimensions";
-import { CertificateCanvas } from "@/lib/certificate-canvas";
+import { CertificateStage } from "@/components/certificate-stage";
 import {
   SAMPLE_BADGE,
   SAMPLE_VERIFY_URL,
@@ -31,7 +27,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Eye, EyeOff, Undo2 } from "lucide-react";
 import { toast } from "sonner";
+
+const ALIGN_OPTIONS: { value: NonNullable<TemplateConfigField["align"]>; label: string }[] =
+  [
+    { value: "left", label: "Esquerda" },
+    { value: "center", label: "Centro" },
+    { value: "right", label: "Direita" },
+  ];
 
 export function TemplateEditor({
   templateId,
@@ -47,31 +51,72 @@ export function TemplateEditor({
 }) {
   const [hasImage, setHasImage] = useState(hasBgImage);
   const [imageKey, setImageKey] = useState(0);
-  const [config, setConfig] = useState<TemplateConfig>(
-    initialConfig ?? getDefaultTemplateConfig()
-  );
+  const [config, setConfig] = useState<TemplateConfig>(initialConfig);
   const [kind, setKind] = useState<CertificateKind>("participant");
+  const [selected, setSelected] = useState<string | null>(null);
+  const [history, setHistory] = useState<TemplateConfig[]>([]);
+  const [dirty, setDirty] = useState(false);
   const [uploading, startUpload] = useTransition();
   const [saving, startSave] = useTransition();
 
-  // O certificado tem 800px fixos; o palco encolhe junto com a coluna.
-  const stageRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-
-  useEffect(() => {
-    const node = stageRef.current;
-    if (!node) return;
-
-    const observer = new ResizeObserver(([entry]) => {
-      setScale(Math.min(1, entry.contentRect.width / CERTIFICATE_WIDTH));
-    });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
+  const values = useMemo(() => sampleCertificateValues(kind), [kind]);
   const bgImageUrl = hasImage
     ? `/api/templates/${templateId}/image?v=${imageKey}`
     : null;
+
+  // Fechar a aba com alteração pendente perde tudo em silêncio.
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  /** Guarda o estado atual para o desfazer. Um snapshot por gesto. */
+  const beginChange = useCallback(() => {
+    setHistory((prev) => [...prev.slice(-49), config]);
+    setDirty(true);
+  }, [config]);
+
+  function undo() {
+    setHistory((prev) => {
+      const last = prev[prev.length - 1];
+      if (last) setConfig(last);
+      return prev.slice(0, -1);
+    });
+  }
+
+  const moveField = useCallback((key: string, x: number, y: number) => {
+    setConfig((prev) => ({
+      ...prev,
+      fields: { ...prev.fields, [key]: { ...prev.fields[key], x, y } },
+    }));
+  }, []);
+
+  function updateField(
+    key: string,
+    prop: keyof TemplateConfigField,
+    value: string | number | boolean
+  ) {
+    beginChange();
+    setConfig((prev) => ({
+      ...prev,
+      fields: { ...prev.fields, [key]: { ...prev.fields[key], [prop]: value } },
+    }));
+  }
+
+  /** Campo vazio vira 0 no Number(), o que teleporta o campo a cada tecla. */
+  function updateNumber(
+    key: string,
+    prop: "x" | "y" | "fontSize",
+    raw: string
+  ) {
+    if (raw === "") return;
+    const max =
+      prop === "x" ? CERTIFICATE_WIDTH : prop === "y" ? CERTIFICATE_HEIGHT : 120;
+    const min = prop === "fontSize" ? 8 : 0;
+    updateField(key, prop, Math.min(Math.max(Number(raw), min), max));
+  }
 
   function handleUpload(formData: FormData) {
     startUpload(async () => {
@@ -86,47 +131,22 @@ export function TemplateEditor({
     });
   }
 
-  function updateField(
-    key: string,
-    prop: keyof TemplateConfigField,
-    value: string | number | boolean
-  ) {
-    setConfig((prev) => ({
-      ...prev,
-      fields: {
-        ...prev.fields,
-        [key]: { ...prev.fields[key], [prop]: value },
-      },
-    }));
-  }
-
-  /** Campo vazio vira 0 no Number(), o que teleporta o campo a cada tecla. */
-  function updateCoord(key: string, prop: "x" | "y" | "fontSize", raw: string) {
-    if (raw === "") return;
-    const max =
-      prop === "x"
-        ? CERTIFICATE_WIDTH
-        : prop === "y"
-          ? CERTIFICATE_HEIGHT
-          : 120;
-    const min = prop === "fontSize" ? 8 : 0;
-    updateField(key, prop, Math.min(Math.max(Number(raw), min), max));
-  }
-
   function handleSave() {
     startSave(async () => {
       const result = await saveTemplateConfig(templateId, config);
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success("Configuração salva.");
+        setDirty(false);
+        toast.success("Layout salvo.");
       }
     });
   }
 
+  const selectedField = selected ? config.fields[selected] : null;
+
   return (
     <div className="space-y-6">
-      {/* Upload */}
       <Card>
         <CardHeader>
           <CardTitle>Imagem de Fundo</CardTitle>
@@ -159,132 +179,200 @@ export function TemplateEditor({
         </CardContent>
       </Card>
 
-      {/* Preview */}
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle>Preview do Certificado</CardTitle>
+              <CardTitle>Layout do Certificado</CardTitle>
               <CardDescription>
-                Este é o mesmo desenho que gera o PNG e o PDF — o que aparece
-                aqui é o que sai no certificado.
+                Arraste os campos direto no certificado. Este é o mesmo desenho
+                que gera o PNG e o PDF.
               </CardDescription>
             </div>
-            <div className="flex gap-1 rounded-md border p-1">
-              {(["participant", "operator"] as const).map((k) => (
-                <Button
-                  key={k}
-                  type="button"
-                  size="sm"
-                  variant={kind === k ? "secondary" : "ghost"}
-                  onClick={() => setKind(k)}
-                >
-                  {k === "participant" ? "Participante" : "Operador"}
-                </Button>
-              ))}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex gap-1 rounded-md border p-1">
+                {(["participant", "operator"] as const).map((k) => (
+                  <Button
+                    key={k}
+                    type="button"
+                    size="sm"
+                    variant={kind === k ? "secondary" : "ghost"}
+                    onClick={() => setKind(k)}
+                  >
+                    {k === "participant" ? "Participante" : "Operador"}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={undo}
+                disabled={history.length === 0}
+              >
+                <Undo2 className="size-4" />
+                Desfazer
+              </Button>
+              <Button onClick={handleSave} disabled={saving || !dirty} size="sm">
+                {saving ? "Salvando..." : dirty ? "Salvar" : "Salvo"}
+              </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div
-            ref={stageRef}
-            className="relative mx-auto w-full overflow-hidden rounded-lg border"
-            style={{ height: CERTIFICATE_HEIGHT * scale }}
-          >
-            <CertificateCanvas
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+            <CertificateStage
               config={config}
-              values={sampleCertificateValues(kind)}
+              values={values}
               badge={SAMPLE_BADGE[kind]}
               verifyUrl={SAMPLE_VERIFY_URL}
               bgSrc={bgImageUrl}
               qrSrc={qrSrc}
               watermarkSrc="/logo_grasp.png"
-              scale={scale}
+              selected={selected}
+              onSelect={setSelected}
+              onMove={moveField}
+              onBeginChange={beginChange}
             />
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Config fields */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Posição dos Campos</CardTitle>
-          <CardDescription>
-            X e Y em pixels dentro do certificado de {CERTIFICATE_WIDTH}×
-            {CERTIFICATE_HEIGHT}. Campos centralizados usam o X como centro do
-            texto; o número de série é alinhado pela esquerda.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {Object.entries(config.fields).map(([key, field]) => (
-              <div
-                key={key}
-                className="grid grid-cols-2 items-end gap-3 border-b pb-3 sm:grid-cols-6"
-              >
-                <div className="col-span-2 sm:col-span-1">
-                  <Label className="text-xs text-muted-foreground">
-                    {field.label}
-                  </Label>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">X</Label>
-                  <Input
-                    type="number"
-                    value={field.x}
-                    onChange={(e) => updateCoord(key, "x", e.target.value)}
-                    min={0}
-                    max={CERTIFICATE_WIDTH}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Y</Label>
-                  <Input
-                    type="number"
-                    value={field.y}
-                    onChange={(e) => updateCoord(key, "y", e.target.value)}
-                    min={0}
-                    max={CERTIFICATE_HEIGHT}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Fonte</Label>
-                  <Input
-                    type="number"
-                    value={field.fontSize}
-                    onChange={(e) =>
-                      updateCoord(key, "fontSize", e.target.value)
-                    }
-                    min={8}
-                    max={120}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Cor</Label>
-                  <Input
-                    type="color"
-                    value={field.color}
-                    onChange={(e) => updateField(key, "color", e.target.value)}
-                  />
-                </div>
-                <label className="flex items-center gap-2 text-xs">
-                  <input
-                    type="checkbox"
-                    className="size-4"
-                    checked={field.visible !== false}
-                    onChange={(e) =>
-                      updateField(key, "visible", e.target.checked)
-                    }
-                  />
-                  Mostrar
-                </label>
+            <div className="space-y-4">
+              {/* Lista de campos: também é como se alcança um campo escondido
+                  ou pequeno demais para clicar no palco. */}
+              <div className="space-y-1">
+                {Object.entries(config.fields).map(([key, field]) => (
+                  <div
+                    key={key}
+                    className={`flex items-center gap-1 rounded-md border px-2 py-1 text-sm ${
+                      selected === key ? "border-sky-500 bg-sky-500/5" : ""
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setSelected(key)}
+                      className="flex-1 truncate text-left"
+                    >
+                      {field.label}
+                    </button>
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label={
+                        field.visible === false
+                          ? `Mostrar ${field.label}`
+                          : `Ocultar ${field.label}`
+                      }
+                      onClick={() =>
+                        updateField(key, "visible", field.visible === false)
+                      }
+                    >
+                      {field.visible === false ? (
+                        <EyeOff className="size-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </Button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <Button onClick={handleSave} disabled={saving} className="mt-4">
-            {saving ? "Salvando..." : "Salvar Configuração"}
-          </Button>
+              {/* Ajuste fino do campo selecionado */}
+              {selected && selectedField ? (
+                <div className="space-y-3 rounded-md border p-3">
+                  <p className="text-sm font-medium">{selectedField.label}</p>
+
+                  {selectedField.visible === false && (
+                    <p className="text-xs text-muted-foreground">
+                      Oculto — não sai no certificado.
+                    </p>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">X</Label>
+                      <Input
+                        type="number"
+                        value={selectedField.x}
+                        min={0}
+                        max={CERTIFICATE_WIDTH}
+                        onChange={(e) =>
+                          updateNumber(selected, "x", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Y</Label>
+                      <Input
+                        type="number"
+                        value={selectedField.y}
+                        min={0}
+                        max={CERTIFICATE_HEIGHT}
+                        onChange={(e) =>
+                          updateNumber(selected, "y", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Fonte</Label>
+                      <Input
+                        type="number"
+                        value={selectedField.fontSize}
+                        min={8}
+                        max={120}
+                        onChange={(e) =>
+                          updateNumber(selected, "fontSize", e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Cor</Label>
+                      <Input
+                        type="color"
+                        value={selectedField.color}
+                        onChange={(e) =>
+                          updateField(selected, "color", e.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">Alinhamento</Label>
+                    <div className="flex gap-1">
+                      {ALIGN_OPTIONS.map((option) => (
+                        <Button
+                          key={option.value}
+                          type="button"
+                          size="sm"
+                          className="flex-1"
+                          variant={
+                            (selectedField.align ?? "center") === option.value
+                              ? "secondary"
+                              : "ghost"
+                          }
+                          onClick={() =>
+                            updateField(selected, "align", option.value)
+                          }
+                        >
+                          {option.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Setas movem 1 px, com Shift movem 10 px. O campo gruda no
+                    centro do certificado.
+                  </p>
+                </div>
+              ) : (
+                <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+                  Clique num campo do certificado, ou na lista acima, para
+                  ajustá-lo.
+                </p>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
