@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   useTransition,
 } from "react";
 import { uploadTemplateBg, saveTemplateConfig } from "@/app/actions/template";
@@ -39,6 +40,9 @@ import {
 import { Eye, EyeOff, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 
+/** Store que nunca muda: só serve para distinguir servidor de cliente. */
+const subscribeNever = () => () => {};
+
 const ALIGN_OPTIONS: { value: TemplateFieldAlign; label: string }[] =
   [
     { value: "left", label: "Esquerda" },
@@ -67,6 +71,15 @@ export function TemplateEditor({
   const [dirty, setDirty] = useState(false);
   const [uploading, startUpload] = useTransition();
   const [saving, startSave] = useTransition();
+
+  /**
+   * `history` e `dirty` são estado de interação: não existem no servidor. Se o
+   * primeiro render do cliente já os refletir, qualquer HTML servido fora desse
+   * estado inicial vira mismatch de hidratação — e o mismatch de atributo
+   * booleano não é corrigido pelo React, o botão fica no estado errado.
+   * Só depois de montar os botões passam a refletir a interação.
+   */
+  const mounted = useSyncExternalStore(subscribeNever, () => true, () => false);
 
   // Largura medida de cada campo, em px do certificado. Fica em ref porque só é
   // lida sob demanda — em estado, cada medição dispararia outro render.
@@ -244,13 +257,17 @@ export function TemplateEditor({
                 size="sm"
                 variant="outline"
                 onClick={undo}
-                disabled={history.length === 0}
+                disabled={mounted && history.length === 0}
               >
                 <Undo2 className="size-4" />
                 Desfazer
               </Button>
-              <Button onClick={handleSave} disabled={saving || !dirty} size="sm">
-                {saving ? "Salvando..." : dirty ? "Salvar" : "Salvo"}
+              <Button
+                onClick={handleSave}
+                disabled={saving || (mounted && !dirty)}
+                size="sm"
+              >
+                {saving ? "Salvando..." : !mounted || dirty ? "Salvar" : "Salvo"}
               </Button>
             </div>
           </div>
