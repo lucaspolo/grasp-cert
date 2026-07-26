@@ -6,13 +6,10 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    // Rotas de ImageResponse: o JSX destes arquivos é renderizado pelo
+    // Renderização de ImageResponse: o JSX deste arquivo é processado pelo
     // Satori para gerar PNG — <img> ali não vira DOM, então next/image
     // e alt-text não se aplicam.
-    files: [
-      "src/app/api/cert/**/route.tsx",
-      "src/app/api/verificar-certificado/**/route.tsx",
-    ],
+    files: ["src/lib/certificate.tsx"],
     rules: {
       "@next/next/no-img-element": "off",
       "jsx-a11y/alt-text": "off",
