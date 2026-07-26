@@ -1,11 +1,15 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/auth";
-import { loadCertificateData, renderCertificate } from "@/lib/certificate";
+import {
+  loadCertificateData,
+  renderCertificate,
+  renderCertificatePdf,
+} from "@/lib/certificate";
 
 export const runtime = "nodejs";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string; callsign: string }> }
 ) {
   const session = await auth();
@@ -36,5 +40,7 @@ export async function GET(
     });
   }
 
-  return renderCertificate(data);
+  return req.nextUrl.searchParams.get("format") === "pdf"
+    ? renderCertificatePdf(data)
+    : renderCertificate(data);
 }

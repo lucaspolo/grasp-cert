@@ -89,6 +89,21 @@ export default async function VerificarCertificadoOperadorPage({
             alt="Certificado de Operador"
             className="w-full rounded border"
           />
+          <div className="mt-3 flex justify-center gap-2">
+            <a
+              href={`/api/verificar-certificado/operador/${eventId}/${encodeURIComponent(operatorCallsign)}`}
+              download
+              className="rounded border px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Baixar PNG
+            </a>
+            <a
+              href={`/api/verificar-certificado/operador/${eventId}/${encodeURIComponent(operatorCallsign)}?format=pdf`}
+              className="rounded border px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Baixar PDF
+            </a>
+          </div>
         </div>
 
         {/* Details */}

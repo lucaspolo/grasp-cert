@@ -89,6 +89,21 @@ export default async function VerificarCertificadoPage({
             alt="Certificado de Participação"
             className="w-full rounded border"
           />
+          <div className="mt-3 flex justify-center gap-2">
+            <a
+              href={`/api/verificar-certificado/${eventId}/${encodeURIComponent(participantCallsign)}`}
+              download
+              className="rounded border px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Baixar PNG
+            </a>
+            <a
+              href={`/api/verificar-certificado/${eventId}/${encodeURIComponent(participantCallsign)}?format=pdf`}
+              className="rounded border px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Baixar PDF
+            </a>
+          </div>
         </div>
 
         {/* Details */}

@@ -179,7 +179,14 @@ export default async function MeusCertificados() {
                     target="_blank"
                   >
                     <Button variant="outline" size="sm">
-                      Download Certificado
+                      Baixar PNG
+                    </Button>
+                  </Link>
+                  <Link
+                    href={`/api/cert/${event.id}/${encodeURIComponent(callsign!)}?format=pdf`}
+                  >
+                    <Button variant="outline" size="sm">
+                      Baixar PDF
                     </Button>
                   </Link>
                   <Link
@@ -241,7 +248,12 @@ export default async function MeusCertificados() {
                         target="_blank"
                       >
                         <Button variant="outline" size="sm">
-                          Download Certificado de Operador
+                          Baixar PNG
+                        </Button>
+                      </Link>
+                      <Link href={`/api/cert/operator/${event.id}?format=pdf`}>
+                        <Button variant="outline" size="sm">
+                          Baixar PDF
                         </Button>
                       </Link>
                       <Link
