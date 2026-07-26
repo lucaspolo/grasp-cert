@@ -29,15 +29,26 @@ export const CERTIFICATE_FONT_FAMILY = "GraspCertSans";
 /** Altura de linha do Satori; fixada para o DOM não herdar a do Tailwind. */
 const LINE_HEIGHT = "normal";
 
-/**
- * Deslocamento por âncora. A chave `transform` precisa genuinamente não existir
- * para o alinhamento à esquerda: `transform: "none"` e `transform: undefined`
- * fazem o Satori lançar.
- */
-const ALIGN_TRANSFORM: Partial<Record<TemplateFieldAlign, string>> = {
-  center: "translateX(-50%)",
-  right: "translateX(-100%)",
+const ALIGN_JUSTIFY: Record<TemplateFieldAlign, string> = {
+  left: "flex-start",
+  center: "center",
+  right: "flex-end",
 };
+
+/**
+ * Deslocamento da faixa do campo. Cada campo é desenhado dentro de uma faixa da
+ * largura inteira do certificado, e é a faixa que anda — não o texto.
+ *
+ * Ancorar o texto direto em `left: x` fazia a largura disponível virar
+ * `800 - x`: arrastando para a direita o texto quebrava linha e encolhia, e
+ * para a esquerda transbordava a borda. Com a faixa fixa, o espaço para o texto
+ * é sempre o mesmo e o comportamento fica simétrico.
+ */
+export function alignOffset(align: TemplateFieldAlign, x: number): number {
+  if (align === "left") return x;
+  if (align === "right") return x - CERTIFICATE_WIDTH;
+  return x - CERTIFICATE_WIDTH / 2;
+}
 
 export type CertificateCanvasProps = {
   config: TemplateConfig;
@@ -155,25 +166,39 @@ export function CertificateCanvas({
         const text = values[key];
         if (!text || field.visible === false) return null;
 
-        const transform = ALIGN_TRANSFORM[field.align ?? "center"];
+        const align = field.align ?? "center";
+        const offset = alignOffset(align, field.x);
 
         return (
-          <span
+          <div
             key={key}
-            data-field={key}
             style={{
               position: "absolute",
-              left: field.x,
+              left: 0,
               top: field.y,
-              fontSize: field.fontSize,
-              color: field.color,
-              lineHeight: LINE_HEIGHT,
+              width: CERTIFICATE_WIDTH,
               display: "flex",
-              ...(transform ? { transform } : {}),
+              justifyContent: ALIGN_JUSTIFY[align],
+              // A chave precisa genuinamente não existir quando não há
+              // deslocamento: `transform: "none"` e `undefined` fazem o Satori
+              // lançar.
+              ...(offset !== 0
+                ? { transform: `translateX(${offset}px)` }
+                : {}),
             }}
           >
-            {text}
-          </span>
+            <span
+              data-field={key}
+              style={{
+                fontSize: field.fontSize,
+                color: field.color,
+                lineHeight: LINE_HEIGHT,
+                display: "flex",
+              }}
+            >
+              {text}
+            </span>
+          </div>
         );
       })}
 
