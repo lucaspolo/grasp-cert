@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { certificateSerial } from "@/lib/certificate-serial";
 
 export default async function VerificarCertificadoOperadorPage({
   params,
@@ -50,6 +51,8 @@ export default async function VerificarCertificadoOperadorPage({
   const modes = Array.from(modesSet).sort();
   const bands = Array.from(bandsSet).sort();
 
+  const serial = certificateSerial("operator", eventId, operatorCallsign);
+
   const eventStartStr = event.startDate.toLocaleDateString("pt-BR");
   const eventEndStr = event.endDate.toLocaleDateString("pt-BR");
 
@@ -94,6 +97,10 @@ export default async function VerificarCertificadoOperadorPage({
             Detalhes da Verificação
           </h2>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+            <div>
+              <dt className="text-gray-500">Número de Série</dt>
+              <dd className="font-mono font-medium text-gray-900">{serial}</dd>
+            </div>
             <div>
               <dt className="text-gray-500">Evento</dt>
               <dd className="font-medium text-gray-900">{event.name}</dd>

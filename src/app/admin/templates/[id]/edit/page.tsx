@@ -1,7 +1,7 @@
 import { getTemplate, updateTemplateName } from "@/app/actions/template";
 import { TemplateEditor } from "@/components/template-editor";
 import { TemplateNameForm } from "./template-name-form";
-import type { TemplateConfig } from "@/lib/template-config";
+import { mergeTemplateConfig } from "@/lib/template-config";
 import { notFound } from "next/navigation";
 
 export default async function EditTemplatePage({
@@ -25,11 +25,13 @@ export default async function EditTemplatePage({
         defaultName={template.name}
       />
 
+      {/* merge: templates salvos antes de um campo novo existir precisam
+          recebê-lo com os defaults, senão ele nunca aparece no editor */}
       <TemplateEditor
         templateId={template.id}
         templateName={template.name}
         hasBgImage={!!template.bgMimeType}
-        initialConfig={template.config as TemplateConfig | null}
+        initialConfig={mergeTemplateConfig(template.config)}
       />
     </div>
   );

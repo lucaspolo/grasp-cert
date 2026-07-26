@@ -54,6 +54,13 @@ export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
       color: "#475569",
       label: "Data/Hora do QSO",
     },
+    serial: {
+      x: 24,
+      y: 468,
+      fontSize: 10,
+      color: "#78716c",
+      label: "Número de Série",
+    },
   },
 };
 

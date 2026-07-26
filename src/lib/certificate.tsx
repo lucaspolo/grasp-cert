@@ -4,6 +4,8 @@ import { join } from "path";
 import QRCode from "qrcode";
 import { prisma } from "@/lib/prisma";
 import { mergeTemplateConfig, type TemplateConfig } from "@/lib/template-config";
+import { certificateSerial } from "@/lib/certificate-serial";
+import type { CertificateKind } from "@/lib/certificate-kind";
 
 export const CERTIFICATE_WIDTH = 800;
 export const CERTIFICATE_HEIGHT = 500;
@@ -13,8 +15,9 @@ export const CERTIFICATE_HEIGHT = 500;
 export const CERTIFICATE_CACHE_CONTROL =
   "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400";
 
-/** Certificado do participante (quem foi contatado) ou do operador (quem lançou). */
-export type CertificateKind = "participant" | "operator";
+// O tipo mora num módulo próprio para que páginas e helpers possam importá-lo
+// sem arrastar next/og, qrcode e fs junto.
+export type { CertificateKind } from "@/lib/certificate-kind";
 
 export type CertificateData = {
   kind: CertificateKind;
@@ -30,6 +33,7 @@ export type CertificateData = {
   config: TemplateConfig;
   bgDataUri: string | null;
   verifyUrl: string;
+  serial: string;
 };
 
 const LABELS: Record<CertificateKind, { badge: string; role: string }> = {
@@ -127,6 +131,7 @@ export async function loadCertificateData(
     config: mergeTemplateConfig(storedConfig),
     bgDataUri,
     verifyUrl: `${process.env.NEXT_PUBLIC_APP_URL}${verificationPath(kind, eventId, callsign)}`,
+    serial: certificateSerial(kind, eventId, callsign),
   };
 }
 
@@ -341,6 +346,21 @@ export async function renderCertificate(
         >
           {labels.role} · {data.qsoCount} QSO{data.qsoCount !== 1 ? "s" : ""}{" "}
           realizado{data.qsoCount !== 1 ? "s" : ""}
+        </span>
+
+        {/* Serial number — alinhado à esquerda a partir de x, sem o
+            translateX(-50%) dos campos centralizados */}
+        <span
+          style={{
+            position: "absolute",
+            left: fields.serial.x,
+            top: fields.serial.y,
+            fontSize: fields.serial.fontSize,
+            color: fields.serial.color,
+            display: "flex",
+          }}
+        >
+          Nº {data.serial}
         </span>
 
         {/* QR Code — bottom right */}
