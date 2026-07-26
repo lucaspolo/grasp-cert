@@ -75,10 +75,11 @@ QSO (qsos)          ───────*┘─────┘  (cascade delete
 - Middleware (`src/middleware.ts`) redirects unauthenticated users to `/login`.
 
 ### Certificate Generation
-- Route: `GET /api/cert/[qsoId]` → returns a PNG via Next.js `ImageResponse`.
-- Renders event name, participant info, QSO details on the event's assigned template.
+- Toda a renderização vive em `src/lib/certificate.tsx` (`loadCertificateData` + `renderCertificate` + `renderCertificatePdf`). As quatro rotas — participante/operador × privada (`/api/cert/**`) / pública (`/api/verificar-certificado/**`) — só cuidam de autorização, rate limit e cache; **não duplicar o JSX ali**.
+- PNG via `ImageResponse` (Satori); `?format=pdf` embute esse mesmo PNG numa página 800×500pt com `pdf-lib`, então os dois formatos são idênticos por construção.
+- Número de série determinístico em `src/lib/certificate-serial.ts`: HMAC de tipo + evento + indicativo com salt fixo. Alterar o salt ou o algoritmo renumera certificados já emitidos — há teste travando o valor.
 - Background: template's blob image converted to base64 data URI, or default blue gradient.
-- Template fields are positioned via `TemplateConfig` JSON (x, y, fontSize, color per field).
+- Template fields are positioned via `TemplateConfig` JSON (x, y, fontSize, color per field). Config vinda do banco passa sempre por `mergeTemplateConfig()`, que completa campos ausentes com os defaults (templates salvos antes de um campo novo existir).
 - Falls back to the seeded "Padrão" template if the event has no template assigned.
 
 ### Template Management
@@ -140,7 +141,7 @@ prisma/
 | Auth | `src/auth.ts`, `src/auth.config.ts`, `src/middleware.ts`, `src/types/next-auth.d.ts` |
 | Events | `src/app/actions/event.ts`, `src/components/event-form.tsx`, `src/app/admin/events/` |
 | QSOs | `src/app/actions/qso.ts`, `src/components/qso-form.tsx`, `src/app/admin/events/[id]/qsos/` |
-| Certificates | `src/app/api/cert/[qsoId]/route.tsx`, `src/lib/template-config.ts` |
+| Certificates | `src/lib/certificate.tsx`, `src/lib/certificate-serial.ts`, `src/lib/template-config.ts`, `src/app/api/cert/**`, `src/app/api/verificar-certificado/**` |
 | Templates | `src/app/actions/template.ts`, `src/components/template-editor.tsx`, `src/components/template-table.tsx`, `src/app/admin/templates/`, `src/app/api/templates/[id]/image/` |
 | Auditoria | `src/lib/audit.ts` (helper `recordAudit`), `src/app/actions/audit.ts`, `src/app/admin/audit/`, `src/components/audit-table.tsx` |
 | Segurança | `src/lib/rate-limit.ts` (janela fixa no Postgres), `src/lib/jwt-refresh.ts` (revalidação do JWT), `src/lib/second-factor.ts` (verificação 2FA com anti-replay), `src/lib/secret-crypto.ts` (secrets TOTP cifrados, env `TOTP_ENC_KEY`), `next.config.ts` (security headers) |
