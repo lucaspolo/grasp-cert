@@ -4,7 +4,7 @@ import { join } from "path";
 import QRCode from "qrcode";
 import { PDFDocument } from "pdf-lib";
 import { prisma } from "@/lib/prisma";
-import { mergeTemplateConfig, type TemplateConfig } from "@/lib/template-config";
+import { mergeTemplateConfig } from "@/lib/template-config";
 import { certificateSerial } from "@/lib/certificate-serial";
 import type { CertificateKind } from "@/lib/certificate-kind";
 import {
@@ -15,11 +15,18 @@ import {
   CERTIFICATE_HEIGHT,
   CERTIFICATE_WIDTH,
 } from "@/lib/certificate-dimensions";
+import {
+  CERTIFICATE_LABELS,
+  certificateValues,
+  type CertificateData,
+} from "@/lib/certificate-values";
 
 export {
   CERTIFICATE_WIDTH,
   CERTIFICATE_HEIGHT,
 } from "@/lib/certificate-dimensions";
+export { certificateValues } from "@/lib/certificate-values";
+export type { CertificateData } from "@/lib/certificate-values";
 
 // O certificado é determinístico por evento+indicativo (muda só com QSOs novos):
 // cache curto no navegador, mais longo na CDN da Vercel.
@@ -29,28 +36,6 @@ export const CERTIFICATE_CACHE_CONTROL =
 // O tipo mora num módulo próprio para que páginas e helpers possam importá-lo
 // sem arrastar next/og, qrcode e fs junto.
 export type { CertificateKind } from "@/lib/certificate-kind";
-
-export type CertificateData = {
-  kind: CertificateKind;
-  eventId: string;
-  callsign: string;
-  eventName: string;
-  personName: string;
-  eventStartStr: string;
-  eventEndStr: string;
-  modes: string[];
-  bands: string[];
-  qsoCount: number;
-  config: TemplateConfig;
-  bgDataUri: string | null;
-  verifyUrl: string;
-  serial: string;
-};
-
-const LABELS: Record<CertificateKind, { badge: string; role: string }> = {
-  participant: { badge: "Certificado de Participação", role: "Participante" },
-  operator: { badge: "Certificado de Operador", role: "Operador" },
-};
 
 /** Caminho público de verificação — também usado no QR Code do certificado. */
 export function verificationPath(
@@ -244,22 +229,6 @@ export async function renderCertificatePdf(
   });
 }
 
-/** Texto de cada campo posicionável, na chave usada em `config.fields`. */
-export function certificateValues(data: CertificateData): Record<string, string> {
-  const labels = LABELS[data.kind];
-  const plural = data.qsoCount !== 1 ? "s" : "";
-
-  return {
-    eventName: data.eventName,
-    participantCallsign: data.callsign.toUpperCase(),
-    participantName: data.personName,
-    eventDate: `${data.eventStartStr} — ${data.eventEndStr}`,
-    qsoInfo: `Modos: ${data.modes.join(", ")} · Faixas: ${data.bands.join(", ")}`,
-    qsoDateTime: `${labels.role} · ${data.qsoCount} QSO${plural} realizado${plural}`,
-    serial: `Nº ${data.serial}`,
-  };
-}
-
 export async function renderCertificate(
   data: CertificateData,
   init?: { headers?: Record<string, string>; scale?: number }
@@ -284,7 +253,7 @@ export async function renderCertificate(
       <CertificateCanvas
         config={data.config}
         values={certificateValues(data)}
-        badge={LABELS[data.kind].badge}
+        badge={CERTIFICATE_LABELS[data.kind].badge}
         verifyUrl={data.verifyUrl}
         bgSrc={data.bgDataUri}
         qrSrc={`data:image/svg+xml,${encodeURIComponent(qrSvg)}`}

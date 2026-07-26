@@ -9,7 +9,11 @@ import {
   useSyncExternalStore,
   useTransition,
 } from "react";
-import { uploadTemplateBg, saveTemplateConfig } from "@/app/actions/template";
+import {
+  clearTemplateBg,
+  uploadTemplateBg,
+  saveTemplateConfig,
+} from "@/app/actions/template";
 import {
   type TemplateConfig,
   type TemplateConfigField,
@@ -37,7 +41,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Eye, EyeOff, Undo2 } from "lucide-react";
+import { Eye, EyeOff, Image as ImageIcon, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 
 /** Store que nunca muda: só serve para distinguir servidor de cliente. */
@@ -180,6 +184,30 @@ export function TemplateEditor({
     });
   }
 
+  function handleClearBg() {
+    if (!confirm("Remover a imagem de fundo e voltar ao fundo padrão?")) return;
+
+    startUpload(async () => {
+      const result = await clearTemplateBg(templateId);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        setHasImage(false);
+        setImageKey((k) => k + 1);
+        toast.success("Imagem de fundo removida.");
+      }
+    });
+  }
+
+  /** Abre o PNG gerado pelo caminho real, com a config ainda não salva. */
+  function openRealPreview() {
+    const params = new URLSearchParams({
+      kind,
+      config: JSON.stringify(config),
+    });
+    window.open(`/admin/templates/${templateId}/preview?${params}`, "_blank");
+  }
+
   function handleSave() {
     startSave(async () => {
       const result = await saveTemplateConfig(templateId, config);
@@ -221,9 +249,20 @@ export function TemplateEditor({
             </Button>
           </form>
           {hasImage && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              ✓ Imagem de fundo configurada.
-            </p>
+            <div className="mt-2 flex items-center gap-3">
+              <p className="text-sm text-muted-foreground">
+                ✓ Imagem de fundo configurada.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleClearBg}
+                disabled={uploading}
+              >
+                Remover imagem
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -252,6 +291,15 @@ export function TemplateEditor({
                   </Button>
                 ))}
               </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={openRealPreview}
+              >
+                <ImageIcon className="size-4" />
+                Ver PNG real
+              </Button>
               <Button
                 type="button"
                 size="sm"
