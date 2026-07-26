@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   uploadTemplateBg,
   saveTemplateConfig,
@@ -10,6 +10,17 @@ import {
   type TemplateConfig,
   type TemplateConfigField,
 } from "@/lib/template-config";
+import {
+  CERTIFICATE_HEIGHT,
+  CERTIFICATE_WIDTH,
+} from "@/lib/certificate-dimensions";
+import { CertificateCanvas } from "@/lib/certificate-canvas";
+import {
+  SAMPLE_BADGE,
+  SAMPLE_VERIFY_URL,
+  sampleCertificateValues,
+} from "@/lib/certificate-sample";
+import type { CertificateKind } from "@/lib/certificate-kind";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,27 +33,41 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 
-const PREVIEW_WIDTH = 800;
-const PREVIEW_HEIGHT = 500;
-
 export function TemplateEditor({
   templateId,
-  templateName,
   hasBgImage,
   initialConfig,
+  qrSrc,
 }: {
   templateId: string;
-  templateName: string;
   hasBgImage: boolean;
-  initialConfig: TemplateConfig | null;
+  initialConfig: TemplateConfig;
+  /** QR de exemplo, gerado no servidor para o qrcode não entrar no bundle. */
+  qrSrc: string;
 }) {
   const [hasImage, setHasImage] = useState(hasBgImage);
   const [imageKey, setImageKey] = useState(0);
   const [config, setConfig] = useState<TemplateConfig>(
     initialConfig ?? getDefaultTemplateConfig()
   );
+  const [kind, setKind] = useState<CertificateKind>("participant");
   const [uploading, startUpload] = useTransition();
   const [saving, startSave] = useTransition();
+
+  // O certificado tem 800px fixos; o palco encolhe junto com a coluna.
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const node = stageRef.current;
+    if (!node) return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      setScale(Math.min(1, entry.contentRect.width / CERTIFICATE_WIDTH));
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   const bgImageUrl = hasImage
     ? `/api/templates/${templateId}/image?v=${imageKey}`
@@ -64,7 +89,7 @@ export function TemplateEditor({
   function updateField(
     key: string,
     prop: keyof TemplateConfigField,
-    value: string | number
+    value: string | number | boolean
   ) {
     setConfig((prev) => ({
       ...prev,
@@ -73,6 +98,19 @@ export function TemplateEditor({
         [key]: { ...prev.fields[key], [prop]: value },
       },
     }));
+  }
+
+  /** Campo vazio vira 0 no Number(), o que teleporta o campo a cada tecla. */
+  function updateCoord(key: string, prop: "x" | "y" | "fontSize", raw: string) {
+    if (raw === "") return;
+    const max =
+      prop === "x"
+        ? CERTIFICATE_WIDTH
+        : prop === "y"
+          ? CERTIFICATE_HEIGHT
+          : 120;
+    const min = prop === "fontSize" ? 8 : 0;
+    updateField(key, prop, Math.min(Math.max(Number(raw), min), max));
   }
 
   function handleSave() {
@@ -88,57 +126,14 @@ export function TemplateEditor({
 
   return (
     <div className="space-y-6">
-      {/* Instructions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Como criar a imagem de fundo</CardTitle>
-          <CardDescription>
-            Siga estas orientações para que o certificado fique com boa
-            qualidade.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <ul className="list-disc pl-5 space-y-1.5">
-            <li>
-              <strong>Dimensões:</strong> mínimo{" "}
-              <code className="text-foreground">800 × 500 px</code>, máximo{" "}
-              <code className="text-foreground">1920 × 1200 px</code>.
-            </li>
-            <li>
-              <strong>Formatos aceitos:</strong> PNG (recomendado), JPEG ou
-              WebP. Tamanho máximo de 5 MB.
-            </li>
-            <li>
-              <strong>Áreas de texto:</strong> deixe espaço livre (sem
-              elementos visuais pesados) nas regiões onde os campos do
-              certificado serão posicionados — você pode ajustar as coordenadas
-              X/Y na seção &quot;Posição dos Campos&quot; abaixo.
-            </li>
-            <li>
-              <strong>Contraste:</strong> escolha cores de fonte que contrastem
-              com o fundo. Se o fundo for escuro, use cores claras nos campos;
-              se for claro, use cores escuras.
-            </li>
-            <li>
-              <strong>Elementos sugeridos:</strong> bordas decorativas, logo do
-              evento/clube, título &quot;Certificado de Participação&quot; e
-              qualquer arte fixa. Os dados variáveis (indicativo, nome, datas,
-              QSO) serão sobrepostos automaticamente.
-            </li>
-            <li>
-              <strong>Sem imagem?</strong> Sem problemas — um fundo padrão
-              azul-escuro com borda dourada será utilizado.
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-
       {/* Upload */}
       <Card>
         <CardHeader>
           <CardTitle>Imagem de Fundo</CardTitle>
           <CardDescription>
-            Envie uma imagem PNG, JPEG ou WebP (mín 800×500, máx 1920×1200, até 5MB).
+            PNG, JPEG ou WebP — mínimo 800×500, máximo 1920×1200, até 5 MB. Sem
+            imagem, o certificado usa o fundo amarelo padrão com selo, borda e
+            marca d&apos;água; com imagem, esses elementos dão lugar à sua arte.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -167,50 +162,45 @@ export function TemplateEditor({
       {/* Preview */}
       <Card>
         <CardHeader>
-          <CardTitle>Preview do Certificado</CardTitle>
-          <CardDescription>
-            Visualize como o certificado ficará com as posições configuradas.
-          </CardDescription>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle>Preview do Certificado</CardTitle>
+              <CardDescription>
+                Este é o mesmo desenho que gera o PNG e o PDF — o que aparece
+                aqui é o que sai no certificado.
+              </CardDescription>
+            </div>
+            <div className="flex gap-1 rounded-md border p-1">
+              {(["participant", "operator"] as const).map((k) => (
+                <Button
+                  key={k}
+                  type="button"
+                  size="sm"
+                  variant={kind === k ? "secondary" : "ghost"}
+                  onClick={() => setKind(k)}
+                >
+                  {k === "participant" ? "Participante" : "Operador"}
+                </Button>
+              ))}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div
-            className="relative border rounded-lg overflow-hidden mx-auto"
-            style={{
-              width: PREVIEW_WIDTH,
-              height: PREVIEW_HEIGHT,
-              background: bgImageUrl
-                ? `url(${bgImageUrl}) center/cover`
-                : "linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%)",
-            }}
+            ref={stageRef}
+            className="relative mx-auto w-full overflow-hidden rounded-lg border"
+            style={{ height: CERTIFICATE_HEIGHT * scale }}
           >
-            {/* Decorative border overlay when no custom bg */}
-            {!bgImageUrl && (
-              <div className="absolute inset-3 border-2 border-amber-400/40 rounded-lg" />
-            )}
-
-            {Object.entries(config.fields).map(([key, field]) => (
-              <span
-                key={key}
-                className="absolute whitespace-nowrap font-bold"
-                style={{
-                  left: field.x,
-                  top: field.y,
-                  fontSize: field.fontSize,
-                  color: field.color,
-                  transform: "translateX(-50%)",
-                  textShadow: bgImageUrl
-                    ? "none"
-                    : "0 1px 3px rgba(0,0,0,0.3)",
-                }}
-              >
-                {key === "eventName" && templateName}
-                {key === "participantCallsign" && "PY2ABC"}
-                {key === "participantName" && "João da Silva"}
-                {key === "eventDate" && "01/01/2026 — 02/01/2026"}
-                {key === "qsoInfo" && "14.250 MHz · SSB · RST 59/59"}
-                {key === "qsoDateTime" && "01/01/2026 14:30 UTC"}
-              </span>
-            ))}
+            <CertificateCanvas
+              config={config}
+              values={sampleCertificateValues(kind)}
+              badge={SAMPLE_BADGE[kind]}
+              verifyUrl={SAMPLE_VERIFY_URL}
+              bgSrc={bgImageUrl}
+              qrSrc={qrSrc}
+              watermarkSrc="/logo_grasp.png"
+              scale={scale}
+            />
           </div>
         </CardContent>
       </Card>
@@ -220,8 +210,9 @@ export function TemplateEditor({
         <CardHeader>
           <CardTitle>Posição dos Campos</CardTitle>
           <CardDescription>
-            Configure a posição (X, Y), tamanho da fonte e cor para cada campo
-            do certificado. O preview acima reflete as alterações.
+            X e Y em pixels dentro do certificado de {CERTIFICATE_WIDTH}×
+            {CERTIFICATE_HEIGHT}. Campos centralizados usam o X como centro do
+            texto; o número de série é alinhado pela esquerda.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -229,9 +220,9 @@ export function TemplateEditor({
             {Object.entries(config.fields).map(([key, field]) => (
               <div
                 key={key}
-                className="grid grid-cols-5 gap-3 items-end border-b pb-3"
+                className="grid grid-cols-2 items-end gap-3 border-b pb-3 sm:grid-cols-6"
               >
-                <div>
+                <div className="col-span-2 sm:col-span-1">
                   <Label className="text-xs text-muted-foreground">
                     {field.label}
                   </Label>
@@ -241,11 +232,9 @@ export function TemplateEditor({
                   <Input
                     type="number"
                     value={field.x}
-                    onChange={(e) =>
-                      updateField(key, "x", Number(e.target.value))
-                    }
+                    onChange={(e) => updateCoord(key, "x", e.target.value)}
                     min={0}
-                    max={PREVIEW_WIDTH}
+                    max={CERTIFICATE_WIDTH}
                   />
                 </div>
                 <div className="space-y-1">
@@ -253,11 +242,9 @@ export function TemplateEditor({
                   <Input
                     type="number"
                     value={field.y}
-                    onChange={(e) =>
-                      updateField(key, "y", Number(e.target.value))
-                    }
+                    onChange={(e) => updateCoord(key, "y", e.target.value)}
                     min={0}
-                    max={PREVIEW_HEIGHT}
+                    max={CERTIFICATE_HEIGHT}
                   />
                 </div>
                 <div className="space-y-1">
@@ -266,7 +253,7 @@ export function TemplateEditor({
                     type="number"
                     value={field.fontSize}
                     onChange={(e) =>
-                      updateField(key, "fontSize", Number(e.target.value))
+                      updateCoord(key, "fontSize", e.target.value)
                     }
                     min={8}
                     max={120}
@@ -280,6 +267,17 @@ export function TemplateEditor({
                     onChange={(e) => updateField(key, "color", e.target.value)}
                   />
                 </div>
+                <label className="flex items-center gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    className="size-4"
+                    checked={field.visible !== false}
+                    onChange={(e) =>
+                      updateField(key, "visible", e.target.checked)
+                    }
+                  />
+                  Mostrar
+                </label>
               </div>
             ))}
           </div>

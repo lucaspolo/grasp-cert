@@ -8,16 +8,25 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import sharp from "sharp";
 import type { TemplateConfig } from "@/lib/template-config";
+import {
+  CERTIFICATE_HEIGHT,
+  CERTIFICATE_WIDTH,
+} from "@/lib/certificate-dimensions";
 
+// Atenção ao acrescentar propriedade de campo: o z.object descarta chave
+// desconhecida em silêncio, então o schema precisa aceitá-la ANTES de o editor
+// começar a enviá-la — senão a UI diz "Configuração salva." e o dado se perde.
 const templateConfigSchema = z.object({
   fields: z.record(
     z.string(),
     z.object({
-      x: z.number().min(0),
-      y: z.number().min(0),
+      x: z.number().min(0).max(CERTIFICATE_WIDTH),
+      y: z.number().min(0).max(CERTIFICATE_HEIGHT),
       fontSize: z.number().min(8).max(120),
       color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-      label: z.string(),
+      label: z.string().max(120),
+      align: z.enum(["left", "center", "right"]).optional(),
+      visible: z.boolean().optional(),
     })
   ),
 });
@@ -255,7 +264,10 @@ export async function saveTemplateConfig(
 
   const parsed = templateConfigSchema.safeParse(config);
   if (!parsed.success) {
-    return { error: "Configuração inválida." };
+    const issue = parsed.error.issues[0];
+    return {
+      error: `Configuração inválida em ${issue.path.join(".")}: ${issue.message}`,
+    };
   }
 
   const template = await prisma.template.update({
