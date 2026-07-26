@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { CENTER_X, dragToPosition, nudgeToPosition } from "./stage-geometry";
+import {
+  CENTER_X,
+  dragToPosition,
+  nudgeToPosition,
+  realignX,
+} from "./stage-geometry";
 
 const base = { originX: 100, originY: 100, scale: 1 };
 
@@ -83,6 +88,37 @@ describe("dragToPosition", () => {
     });
 
     expect(pos).toMatchObject({ x: 110, y: 110 });
+  });
+});
+
+describe("realignX", () => {
+  it("mantém o texto no lugar ao trocar de centro para esquerda", () => {
+    // Caso real: nome do evento centralizado em 400, 590px de largura. Sem
+    // reancorar, o texto passava a COMEÇAR em 400 e saía pela direita.
+    expect(realignX(400, 590, "center", "left")).toBe(105);
+  });
+
+  it("mantém o texto no lugar ao trocar de centro para direita", () => {
+    expect(realignX(400, 590, "center", "right")).toBe(695);
+  });
+
+  it("faz o caminho de volta sem deriva", () => {
+    const esquerda = realignX(400, 200, "center", "left");
+    expect(realignX(esquerda, 200, "left", "center")).toBe(400);
+  });
+
+  it("não sai do certificado", () => {
+    expect(realignX(50, 600, "center", "right")).toBe(350);
+    expect(realignX(700, 600, "center", "left")).toBe(400);
+    expect(realignX(20, 600, "center", "left")).toBe(0);
+  });
+
+  it("é identidade quando a âncora não muda", () => {
+    expect(realignX(123, 400, "center", "center")).toBe(123);
+  });
+
+  it("sobrevive a largura ainda não medida", () => {
+    expect(realignX(400, 0, "center", "left")).toBe(400);
   });
 });
 
