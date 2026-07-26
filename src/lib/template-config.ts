@@ -60,3 +60,24 @@ export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
 export function getDefaultTemplateConfig(): TemplateConfig {
   return structuredClone(DEFAULT_TEMPLATE_CONFIG);
 }
+
+/**
+ * Normaliza a config vinda do banco: templates salvos antes de um campo novo
+ * existir não têm a chave no JSON, então os defaults preenchem as lacunas.
+ * Campos desconhecidos são descartados — só o que o certificado desenha vale.
+ */
+export function mergeTemplateConfig(stored: unknown): TemplateConfig {
+  const merged = getDefaultTemplateConfig();
+
+  const storedFields = (stored as TemplateConfig | null)?.fields;
+  if (!storedFields || typeof storedFields !== "object") return merged;
+
+  for (const [key, field] of Object.entries(merged.fields)) {
+    const override = storedFields[key];
+    if (override && typeof override === "object") {
+      merged.fields[key] = { ...field, ...override };
+    }
+  }
+
+  return merged;
+}
