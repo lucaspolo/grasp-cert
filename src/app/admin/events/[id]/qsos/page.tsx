@@ -31,7 +31,9 @@ export default async function QSOsPage({
   if (!event) notFound();
 
   const qsos = await listQSOsByEvent(id);
-  const canDelete = role === "OWNER" || role === "ADMIN";
+  const canManageAll = role === "OWNER" || role === "ADMIN";
+  const eventBands = event.eventBands.map((eb) => eb.band);
+  const eventModes = event.eventModes.map((em) => em.mode);
 
   return (
     <div>
@@ -56,14 +58,21 @@ export default async function QSOsPage({
       <div className="grid gap-4 md:grid-cols-2">
         <QSOForm
           eventId={id}
-          eventBands={event.eventBands.map((eb) => eb.band)}
-          eventModes={event.eventModes.map((em) => em.mode)}
+          eventBands={eventBands}
+          eventModes={eventModes}
         />
         <QSOImport eventId={id} />
       </div>
 
       <div className="mt-6">
-        <QSOTable qsos={qsos} eventId={id} showDelete={canDelete} />
+        <QSOTable
+          qsos={qsos}
+          eventId={id}
+          eventBands={eventBands}
+          eventModes={eventModes}
+          canManageAll={canManageAll}
+          currentCallsign={session?.user?.callsign ?? null}
+        />
       </div>
     </div>
   );

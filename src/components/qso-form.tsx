@@ -7,34 +7,67 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DateTimeInput } from "@/components/datetime-input";
+import { cn } from "@/lib/utils";
 
 type BandOption = { id: string; name: string; label: string };
 type ModeOption = { id: string; name: string; label: string };
+
+export type QSOFormValues = {
+  participantCallsign: string;
+  /** "DD/MM/AAAA HH:mm" em UTC. */
+  dateTime: string;
+  bandId: string;
+  modeId: string;
+  rstSent: string;
+  rstReceived: string;
+  observations: string;
+};
+
+type QSOFormAction = (
+  prevState: QSOFormState,
+  formData: FormData
+) => Promise<QSOFormState>;
 
 export function QSOForm({
   eventId,
   eventBands,
   eventModes,
+  action,
+  defaultValues,
+  title = "Adicionar QSO",
+  submitLabel = "Adicionar QSO",
+  className,
 }: {
   eventId: string;
   eventBands: BandOption[];
   eventModes: ModeOption[];
+  /** Por padrão cria um QSO; a edição injeta `updateQSO` já com os ids. */
+  action?: QSOFormAction;
+  defaultValues?: QSOFormValues;
+  title?: string;
+  submitLabel?: string;
+  className?: string;
 }) {
-  const boundCreate = createQSO.bind(null, eventId);
+  const boundAction = action ?? createQSO.bind(null, eventId);
   const [state, formAction, pending] = useActionState<QSOFormState, FormData>(
-    boundCreate,
+    boundAction,
     {}
   );
 
   return (
-    <form action={formAction} className="space-y-4 rounded-lg border p-4">
-      <h3 className="font-semibold">Adicionar QSO</h3>
+    <form
+      action={formAction}
+      className={cn("space-y-4 rounded-lg border p-4", className)}
+    >
+      {title && <h3 className="font-semibold">{title}</h3>}
 
       {state.message && (
         <p className="text-sm text-green-600 dark:text-green-400">
           {state.message}
         </p>
       )}
+
+      {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <div className="space-y-1">
@@ -43,6 +76,7 @@ export function QSOForm({
             id="participantCallsign"
             name="participantCallsign"
             placeholder="PY2ABC"
+            defaultValue={defaultValues?.participantCallsign}
             required
           />
           {state.errors?.participantCallsign && (
@@ -57,6 +91,7 @@ export function QSOForm({
           <DateTimeInput
             id="dateTime"
             name="dateTime"
+            defaultValue={defaultValues?.dateTime}
             required
           />
           {state.errors?.dateTime && (
@@ -71,6 +106,7 @@ export function QSOForm({
           <select
             id="bandId"
             name="bandId"
+            defaultValue={defaultValues?.bandId ?? ""}
             required
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
           >
@@ -93,6 +129,7 @@ export function QSOForm({
           <select
             id="modeId"
             name="modeId"
+            defaultValue={defaultValues?.modeId ?? ""}
             required
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
           >
@@ -114,6 +151,7 @@ export function QSOForm({
             id="rstSent"
             name="rstSent"
             placeholder="59"
+            defaultValue={defaultValues?.rstSent}
             required
           />
           {state.errors?.rstSent && (
@@ -129,6 +167,7 @@ export function QSOForm({
             id="rstReceived"
             name="rstReceived"
             placeholder="59"
+            defaultValue={defaultValues?.rstReceived}
             required
           />
           {state.errors?.rstReceived && (
@@ -141,11 +180,16 @@ export function QSOForm({
 
       <div className="space-y-1">
         <Label htmlFor="observations">Observações</Label>
-        <Textarea id="observations" name="observations" rows={2} />
+        <Textarea
+          id="observations"
+          name="observations"
+          rows={2}
+          defaultValue={defaultValues?.observations}
+        />
       </div>
 
       <Button type="submit" disabled={pending}>
-        {pending ? "Salvando..." : "Adicionar QSO"}
+        {pending ? "Salvando..." : submitLabel}
       </Button>
     </form>
   );
