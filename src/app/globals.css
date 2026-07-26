@@ -2,6 +2,20 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/*
+ * Fonte do certificado: o MESMO binário que o Satori usa para gerar o PNG.
+ * Sem isso o editor mediria o texto numa fonte e o certificado sairia em
+ * outra, e nenhum ajuste de posição transferiria. Usada só pelo desenho do
+ * certificado (src/lib/certificate-canvas.tsx), não pela interface.
+ */
+@font-face {
+  font-family: "GraspCertSans";
+  src: url("/fonts/geist-regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

@@ -39,6 +39,62 @@ describe("mergeTemplateConfig", () => {
     expect(merged.fields.inexistente).toBeUndefined();
   });
 
+  it("o rótulo vem sempre do código, não do que está gravado", () => {
+    // O label é persistido junto da config; sem isso, um rótulo gravado antes
+    // de uma correção venceria os defaults para sempre.
+    const merged = mergeTemplateConfig({
+      fields: { qsoInfo: { label: "Info do QSO (freq, modo, RST)" } },
+    });
+
+    expect(merged.fields.qsoInfo.label).toBe(
+      DEFAULT_TEMPLATE_CONFIG.fields.qsoInfo.label
+    );
+  });
+
+  it("prende x e y dentro do canvas", () => {
+    const merged = mergeTemplateConfig({
+      fields: { eventName: { x: 5000, y: -20 } },
+    });
+
+    expect(merged.fields.eventName.x).toBe(800);
+    expect(merged.fields.eventName.y).toBe(0);
+  });
+
+  it("arredonda coordenadas fracionárias", () => {
+    const merged = mergeTemplateConfig({
+      fields: { eventName: { x: 403.174603174603 } },
+    });
+
+    expect(merged.fields.eventName.x).toBe(403);
+  });
+
+  it("normaliza a cor legada do indicativo", () => {
+    // O renderizador pintava #0f172a de marrom; o editor mostrava azul.
+    const merged = mergeTemplateConfig({
+      fields: { participantCallsign: { color: "#0f172a" } },
+    });
+
+    expect(merged.fields.participantCallsign.color).toBe("#92400e");
+  });
+
+  it("preserva cor escolhida pelo admin", () => {
+    const merged = mergeTemplateConfig({
+      fields: { participantCallsign: { color: "#ffffff" } },
+    });
+
+    expect(merged.fields.participantCallsign.color).toBe("#ffffff");
+  });
+
+  it("preserva align e visible", () => {
+    const merged = mergeTemplateConfig({
+      fields: { eventName: { align: "right", visible: false } },
+    });
+
+    expect(merged.fields.eventName.align).toBe("right");
+    expect(merged.fields.eventName.visible).toBe(false);
+    expect(merged.fields.serial.align).toBe("left");
+  });
+
   it("não deixa a config salva mutar os defaults", () => {
     const merged = mergeTemplateConfig({ fields: { eventName: { x: 999 } } });
     merged.fields.eventName.y = 1;

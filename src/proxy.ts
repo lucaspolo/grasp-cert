@@ -67,5 +67,10 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp)$).*)"],
+  // As extensões de estáticos precisam incluir as fontes: sem isso a fonte do
+  // certificado é redirecionada para /login e o editor mede o texto na fonte
+  // de fallback, desalinhando o preview do certificado real.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|ttf|woff|woff2)$).*)",
+  ],
 };

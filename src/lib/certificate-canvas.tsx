@@ -1,4 +1,7 @@
-import type { TemplateConfig } from "@/lib/template-config";
+import type {
+  TemplateConfig,
+  TemplateFieldAlign,
+} from "@/lib/template-config";
 import {
   CERTIFICATE_HEIGHT,
   CERTIFICATE_WIDTH,
@@ -27,11 +30,14 @@ export const CERTIFICATE_FONT_FAMILY = "GraspCertSans";
 const LINE_HEIGHT = "normal";
 
 /**
- * Regra legada: sem imagem de fundo, o indicativo em azul-marinho era pintado
- * de marrom pelo renderizador. Mantida aqui enquanto o valor não é normalizado
- * na config.
+ * Deslocamento por âncora. A chave `transform` precisa genuinamente não existir
+ * para o alinhamento à esquerda: `transform: "none"` e `transform: undefined`
+ * fazem o Satori lançar.
  */
-const LEGACY_CALLSIGN_COLOR = { from: "#0f172a", to: "#92400e" };
+const ALIGN_TRANSFORM: Partial<Record<TemplateFieldAlign, string>> = {
+  center: "translateX(-50%)",
+  right: "translateX(-100%)",
+};
 
 export type CertificateCanvasProps = {
   config: TemplateConfig;
@@ -147,14 +153,9 @@ export function CertificateCanvas({
       {/* Campos posicionáveis */}
       {Object.entries(config.fields).map(([key, field]) => {
         const text = values[key];
-        if (!text) return null;
+        if (!text || field.visible === false) return null;
 
-        const color =
-          !hasCustomBg &&
-          key === "participantCallsign" &&
-          field.color === LEGACY_CALLSIGN_COLOR.from
-            ? LEGACY_CALLSIGN_COLOR.to
-            : field.color;
+        const transform = ALIGN_TRANSFORM[field.align ?? "center"];
 
         return (
           <span
@@ -165,13 +166,10 @@ export function CertificateCanvas({
               left: field.x,
               top: field.y,
               fontSize: field.fontSize,
-              color,
+              color: field.color,
               lineHeight: LINE_HEIGHT,
-
               display: "flex",
-              // A chave precisa genuinamente não existir: `transform: "none"` e
-              // `transform: undefined` fazem o Satori lançar.
-              ...(key === "serial" ? {} : { transform: "translateX(-50%)" }),
+              ...(transform ? { transform } : {}),
             }}
           >
             {text}
