@@ -31,6 +31,9 @@ export default auth((req) => {
     pathname.startsWith("/esqueci-minha-senha") ||
     pathname.startsWith("/nova-senha") ||
     pathname.startsWith("/verificar-email") ||
+    // O tutorial ensina justamente a se cadastrar e entrar — precisa abrir
+    // para quem ainda não tem conta.
+    pathname.startsWith("/ajuda") ||
     pathname.startsWith("/verificar-certificado") ||
     pathname.startsWith("/eventos") ||
     pathname.startsWith("/api/verificar-certificado") ||
