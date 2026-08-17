@@ -4,7 +4,7 @@ import { createHash, randomBytes, randomInt } from "crypto";
 import { generateSecret, generateURI, verifySync } from "otplib";
 import { compareSync, hashSync } from "bcryptjs";
 
-const ISSUER = "GRASP Cert";
+const ISSUER = "Ham Cert";
 
 /** Tolerance (in seconds) applied when verifying TOTP codes (~1 step). */
 const EPOCH_TOLERANCE_SECONDS = 30;

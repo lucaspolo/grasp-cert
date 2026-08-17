@@ -4,10 +4,15 @@ import type { CertificateKind } from "@/lib/certificate-kind";
 /**
  * Salt fixo do número de série. Não é segredo: o número identifica o
  * certificado, quem confere a autenticidade é a página de verificação, que
- * consulta os QSOs no banco. Alterar este valor renumera todos os
- * certificados já emitidos — não mude sem necessidade.
+ * consulta os QSOs no banco.
+ *
+ * Alterar este valor (ou o prefixo abaixo) renumera todos os certificados já
+ * emitidos. Enquanto nenhum certificado tiver sido entregue a um participante
+ * isso é inofensivo — foi o caso da renomeação de `grasp-cert` para
+ * `ham-cert`. A partir da primeira emissão real, deixa de ser: aí o caminho é
+ * cunhar um `/v2` e manter o `/v1` para o que já saiu.
  */
-const SERIAL_SALT = "grasp-cert/serial/v1";
+const SERIAL_SALT = "ham-cert/serial/v1";
 
 /** Base32 de Crockford: sem I, L, O e U, que se confundem com 1, 0 e V ao ler. */
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -30,5 +35,5 @@ export function certificateSerial(
     out += ALPHABET[digest[i] % ALPHABET.length];
   }
 
-  return `GC-${out.slice(0, 4)}-${out.slice(4)}`;
+  return `HC-${out.slice(0, 4)}-${out.slice(4)}`;
 }

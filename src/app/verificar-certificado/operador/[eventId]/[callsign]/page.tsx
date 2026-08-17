@@ -200,7 +200,7 @@ export default async function VerificarCertificadoOperadorPage({
       </div>
 
       <p className="mt-4 text-xs text-gray-400">
-        Gerado por GRASP-CERT
+        Gerado por HAM-CERT
       </p>
     </div>
   );

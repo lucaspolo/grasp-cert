@@ -22,7 +22,7 @@ const data: CertificateData = {
   config: DEFAULT_TEMPLATE_CONFIG,
   bgDataUri: null,
   verifyUrl: "https://exemplo.test/verificar",
-  serial: "GC-SVX9-DR0P",
+  serial: "HC-1JCY-2SSM",
 };
 
 /**

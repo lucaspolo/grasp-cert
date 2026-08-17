@@ -23,7 +23,7 @@ export default async function Home() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">GRASP Cert</h1>
+        <h1 className="text-3xl font-bold">Ham Cert</h1>
         <p className="mt-2 text-muted-foreground">
           Certificados de participação em concursos de radioamadorismo
         </p>

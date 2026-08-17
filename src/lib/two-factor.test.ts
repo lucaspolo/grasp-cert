@@ -90,7 +90,7 @@ describe("buildOtpAuthUrl", () => {
     expect(url.startsWith("otpauth://totp/")).toBe(true);
     expect(url).toContain("PY2ABC");
     expect(url).toContain(secret);
-    expect(url).toContain("GRASP");
+    expect(url).toContain("Ham");
   });
 });
 

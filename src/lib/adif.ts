@@ -186,10 +186,11 @@ function utcTime(d: Date): string {
 export function buildAdif(qsos: ExportQso[], generatedAt?: Date): string {
   const stamp = generatedAt ? utcDate(generatedAt) + " " + utcTime(generatedAt) : "";
   const header =
-    `GRASP Cert ADIF export\n` +
+    `Ham Cert ADIF export\n` +
     (stamp ? `Gerado em ${stamp} UTC\n` : "") +
     `<ADIF_VER:5>3.1.4\n` +
-    `<PROGRAMID:10>GRASP Cert\n` +
+    // O número é o comprimento do valor, não um id: "Ham Cert" tem 8 bytes.
+    `<PROGRAMID:8>Ham Cert\n` +
     `<EOH>\n`;
 
   const records = qsos.map((qso) => {

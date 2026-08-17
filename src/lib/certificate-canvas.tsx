@@ -24,7 +24,7 @@ import {
  *      o desenho vem por iteração, então aparece nos dois lados de uma vez.
  */
 
-export const CERTIFICATE_FONT_FAMILY = "GraspCertSans";
+export const CERTIFICATE_FONT_FAMILY = "HamCertSans";
 
 /** Altura de linha do Satori; fixada para o DOM não herdar a do Tailwind. */
 const LINE_HEIGHT = "normal";

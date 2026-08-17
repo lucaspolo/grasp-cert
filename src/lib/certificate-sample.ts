@@ -18,7 +18,7 @@ import {
  * há como o exemplo e o resultado divergirem.
  */
 export const SAMPLE_VERIFY_URL =
-  "https://grasp-cert.exemplo.br/verificar-certificado/evento-exemplo/PY2ABC";
+  "https://ham-cert.exemplo.br/verificar-certificado/evento-exemplo/PY2ABC";
 
 export const SAMPLE_BADGE: Record<CertificateKind, string> = {
   participant: CERTIFICATE_LABELS.participant.badge,
@@ -43,7 +43,7 @@ export function sampleCertificateData(
     config,
     bgDataUri: null,
     verifyUrl: SAMPLE_VERIFY_URL,
-    serial: "GC-SVX9-DR0P",
+    serial: "HC-1JCY-2SSM",
   };
 }
 

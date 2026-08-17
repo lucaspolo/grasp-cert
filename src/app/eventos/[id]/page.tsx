@@ -29,9 +29,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const stats = await getPublicEventStats(id);
-  if (!stats) return { title: "Evento não encontrado — GRASP Cert" };
+  if (!stats) return { title: "Evento não encontrado — Ham Cert" };
   return {
-    title: `${stats.name} — GRASP Cert`,
+    title: `${stats.name} — Ham Cert`,
     description: `${stats.totalQsos} QSOs e ${stats.participants} participantes em ${stats.name}.`,
   };
 }

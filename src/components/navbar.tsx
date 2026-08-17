@@ -13,7 +13,7 @@ export async function Navbar() {
       <header className="border-b bg-background">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
           <Link href="/" className="font-semibold text-lg">
-            GRASP Cert
+            Ham Cert
           </Link>
           <div className="flex items-center gap-3">
             <ThemeToggle />
@@ -60,7 +60,7 @@ export async function Navbar() {
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/" className="font-semibold text-lg">
-            GRASP Cert
+            Ham Cert
           </Link>
           <nav className="hidden md:flex items-center gap-4 text-sm">
             <Link

@@ -1,6 +1,6 @@
 ---
 name: manual-ajuda
-description: Como manter o manual ilustrado do GRASP Cert em /ajuda — quando ele fica desatualizado, como recapturar telas com o Chrome, como escrever seções e cargos, e que rumo o manual deve tomar. Use ao mexer em qualquer tela que apareça no manual, ao criar página ou rota nova, ao mudar papel/permissão em src/proxy.ts ou nos server actions, ao alterar o layout do certificado, e sempre que for editar src/app/ajuda/ ou public/ajuda/.
+description: Como manter o manual ilustrado do Ham Cert em /ajuda — quando ele fica desatualizado, como recapturar telas com o Chrome, como escrever seções e cargos, e que rumo o manual deve tomar. Use ao mexer em qualquer tela que apareça no manual, ao criar página ou rota nova, ao mudar papel/permissão em src/proxy.ts ou nos server actions, ao alterar o layout do certificado, e sempre que for editar src/app/ajuda/ ou public/ajuda/.
 ---
 
 # Manter o manual em `/ajuda`
@@ -203,7 +203,7 @@ outras imagens (ranking, "12 QSOs lançados") passarem a discordar entre si.
 Limpe depois:
 
 ```bash
-docker compose exec -T db psql -U grasp -d grasp_cert \
+docker compose exec -T db psql -U ham -d ham_cert \
   -c "delete from qsos where event_id='demo-evt-atual' and id not like 'demo-qso-%';"
 ```
 
