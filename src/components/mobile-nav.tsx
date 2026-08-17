@@ -68,6 +68,12 @@ export function MobileNav({ callsign, role, signOutAction }: MobileNavProps) {
                   Eventos
                 </NavLink>
               )}
+              {/* Último item de primeiro nível, antes da subseção: aqui o grupo
+                  "Configurações" é expandido em linha e nada marca o fim dele,
+                  então um link depois de "Modos" leria como quarto item dele. */}
+              <NavLink href="/ajuda" onClick={() => setOpen(false)}>
+                Ajuda
+              </NavLink>
               {isOwnerOrAdmin && (
                 <>
                   <div className="pt-3 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -84,9 +90,6 @@ export function MobileNav({ callsign, role, signOutAction }: MobileNavProps) {
                   </NavLink>
                 </>
               )}
-              <NavLink href="/ajuda" onClick={() => setOpen(false)}>
-                Ajuda
-              </NavLink>
             </nav>
 
             <div className="border-t px-4 py-4 space-y-3">

@@ -56,4 +56,21 @@ describe("conteúdo do tutorial", () => {
     const srcs = shots.map((s) => s.shot.src);
     expect(new Set(srcs).size).toBe(srcs.length);
   });
+
+  // Mesma trava das imagens, para o arquivo de exemplo do ADIF: renomeá-lo
+  // deixaria um link de download quebrado sem quebrar o build.
+  it("só aponta para arquivos locais que existem", () => {
+    const links = TUTORIAL_SECTIONS.flatMap((section) =>
+      section.steps.flatMap((step) =>
+        step.link ? [{ slug: section.slug, link: step.link }] : []
+      )
+    );
+
+    for (const { slug, link } of links) {
+      expect(link.label.trim().length, slug).toBeGreaterThan(0);
+      if (!link.href.startsWith("/")) continue;
+      const path = join(process.cwd(), "public", link.href);
+      expect(existsSync(path), `${slug}: ${link.href} não existe`).toBe(true);
+    }
+  });
 });
