@@ -47,7 +47,7 @@ export function MobileNav({
           {/* Slide-out panel */}
           <div className="fixed inset-y-0 left-0 z-50 w-64 bg-background border-r shadow-lg flex flex-col">
             <div className="flex items-center justify-between px-4 h-14 border-b">
-              <span className="font-semibold text-lg">GRASP Cert</span>
+              <span className="font-semibold text-lg">Ham Cert</span>
               <button
                 onClick={() => setOpen(false)}
                 className="p-2 text-muted-foreground hover:text-foreground"

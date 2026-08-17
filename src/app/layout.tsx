@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GRASP Cert",
+  title: "Ham Cert",
   description: "Certificados de participação em contestes de radioamador",
 };
 

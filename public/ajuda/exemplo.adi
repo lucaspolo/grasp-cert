@@ -1,7 +1,7 @@
-GRASP Cert - arquivo ADIF de exemplo para o tutorial.
+Ham Cert - arquivo ADIF de exemplo para o tutorial.
 Contem 4 contatos validos, 1 repetido e 2 com erro de proposito.
 <ADIF_VER:5>3.1.4
-<PROGRAMID:10>GRASP Cert
+<PROGRAMID:8>Ham Cert
 <EOH>
 <CALL:6>PY7ABC <QSO_DATE:8>20260710 <TIME_ON:6>131500 <BAND:3>20m <MODE:3>SSB <FREQ:6>14.210 <RST_SENT:2>59 <RST_RCVD:2>59 <EOR>
 <CALL:6>PY8DEF <QSO_DATE:8>20260710 <TIME_ON:6>132200 <BAND:3>20m <MODE:2>CW <FREQ:6>14.045 <RST_SENT:3>599 <RST_RCVD:3>579 <EOR>

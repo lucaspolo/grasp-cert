@@ -10,10 +10,10 @@ export async function sendPasswordResetEmail(email: string, token: string) {
   await resend.emails.send({
     from,
     to: email,
-    subject: "Redefinição de senha — GRASP Cert",
+    subject: "Redefinição de senha — Ham Cert",
     html: `
       <h2>Redefinição de senha</h2>
-      <p>Você solicitou a redefinição de sua senha no GRASP Cert.</p>
+      <p>Você solicitou a redefinição de sua senha no Ham Cert.</p>
       <p>Clique no link abaixo para criar uma nova senha:</p>
       <p><a href="${resetLink}">${resetLink}</a></p>
       <p>Este link expira em 1 hora.</p>
@@ -38,10 +38,10 @@ export async function sendEmailChangeNotice(
   await resend.emails.send({
     from,
     to: oldEmail,
-    subject: "Seu e-mail foi alterado — GRASP Cert",
+    subject: "Seu e-mail foi alterado — Ham Cert",
     html: `
       <h2>Alteração de e-mail</h2>
-      <p>O e-mail da conta <strong>${callsign}</strong> no GRASP Cert foi alterado
+      <p>O e-mail da conta <strong>${callsign}</strong> no Ham Cert foi alterado
       de ${oldEmail} para <strong>${newEmail}</strong>.</p>
       <p>Se foi você, nenhuma ação é necessária.</p>
       <p>Se você não reconhece esta alteração, redefina sua senha imediatamente:</p>
@@ -58,10 +58,10 @@ export async function sendVerificationEmail(email: string, token: string) {
   await resend.emails.send({
     from,
     to: email,
-    subject: "Confirme seu e-mail — GRASP Cert",
+    subject: "Confirme seu e-mail — Ham Cert",
     html: `
       <h2>Confirmação de e-mail</h2>
-      <p>Obrigado por se cadastrar no GRASP Cert!</p>
+      <p>Obrigado por se cadastrar no Ham Cert!</p>
       <p>Clique no link abaixo para confirmar seu e-mail e ativar sua conta:</p>
       <p><a href="${verifyLink}">${verifyLink}</a></p>
       <p>Este link expira em 24 horas.</p>

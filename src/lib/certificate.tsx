@@ -197,7 +197,7 @@ export async function renderCertificatePdf(
   const pdf = await PDFDocument.create();
   pdf.setTitle(`Certificado ${data.serial} — ${data.eventName}`);
   pdf.setSubject(`${data.callsign.toUpperCase()} · ${data.verifyUrl}`);
-  pdf.setCreator("GRASP-CERT");
+  pdf.setCreator("HAM-CERT");
 
   const page = pdf.addPage([CERTIFICATE_WIDTH, CERTIFICATE_HEIGHT]);
   const image = await pdf.embedPng(png);

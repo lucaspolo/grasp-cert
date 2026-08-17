@@ -28,7 +28,7 @@ function certificateData(
     config: getDefaultTemplateConfig(),
     bgDataUri: null,
     verifyUrl: "https://exemplo.test/verificar-certificado/evt-1/PY2ABC",
-    serial: "GC-SVX9-DR0P",
+    serial: "HC-1JCY-2SSM",
     ...overrides,
   };
 }

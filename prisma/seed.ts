@@ -16,7 +16,7 @@ async function main() {
     update: {},
     create: {
       callsign: "PY2ADM",
-      email: "admin@grasp-cert.local",
+      email: "admin@ham-cert.local",
       name: "Administrador",
       city: "São Paulo",
       state: "SP",

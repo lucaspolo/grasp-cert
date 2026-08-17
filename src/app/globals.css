@@ -9,7 +9,7 @@
  * certificado (src/lib/certificate-canvas.tsx), não pela interface.
  */
 @font-face {
-  font-family: "GraspCertSans";
+  font-family: "HamCertSans";
   src: url("/fonts/geist-regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;

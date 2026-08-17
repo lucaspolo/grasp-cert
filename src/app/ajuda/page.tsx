@@ -6,9 +6,9 @@ import { RoleBadge } from "@/components/role-badge";
 import type { TutorialAudience } from "@/lib/role-labels";
 
 export const metadata: Metadata = {
-  title: "Como usar — GRASP Cert",
+  title: "Como usar — Ham Cert",
   description:
-    "Tutorial ilustrado do GRASP Cert: cadastro, certificados, lançamento de QSOs, eventos, templates e administração, com o cargo necessário em cada procedimento.",
+    "Tutorial ilustrado do Ham Cert: cadastro, certificados, lançamento de QSOs, eventos, templates e administração, com o cargo necessário em cada procedimento.",
 };
 
 /** Ordem de apresentação dos cargos, do mais amplo ao mais restrito. */
@@ -49,9 +49,9 @@ export default function AjudaPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <header>
-        <h1 className="text-3xl font-bold">Como usar o GRASP Cert</h1>
+        <h1 className="text-3xl font-bold">Como usar o Ham Cert</h1>
         <p className="mt-2 text-muted-foreground">
-          O GRASP Cert registra os contatos de um concurso de radioamadorismo e
+          O Ham Cert registra os contatos de um concurso de radioamadorismo e
           emite os certificados de participação. Este guia percorre o sistema
           inteiro e indica, em cada seção, quem pode executar o procedimento.
         </p>

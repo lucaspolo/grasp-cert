@@ -6,11 +6,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
-# GRASP Cert — Agent Context
+# Ham Cert — Agent Context
 
 ## Project Purpose
 
-GRASP Cert is a certificate generation and management system for amateur radio contests. Admins create events, log radio contacts (QSOs), and the system generates personalized PNG participation certificates for radio operators. The UI is in **Portuguese (Brazil)**.
+Ham Cert is a certificate generation and management system for amateur radio contests. Admins create events, log radio contacts (QSOs), and the system generates personalized PNG participation certificates for radio operators. The UI is in **Portuguese (Brazil)**.
 
 ### Domain Glossary
 

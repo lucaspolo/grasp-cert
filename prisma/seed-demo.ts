@@ -23,7 +23,7 @@ const DEMO_PASSWORD = "demo1234";
 const DEMO_USERS = [
   {
     callsign: "PY1DEM",
-    email: "demo-admin@grasp-cert.local",
+    email: "demo-admin@ham-cert.local",
     name: "Ana Demonstração",
     city: "Rio de Janeiro",
     state: "RJ",
@@ -31,7 +31,7 @@ const DEMO_USERS = [
   },
   {
     callsign: "PY2DEM",
-    email: "demo-operador@grasp-cert.local",
+    email: "demo-operador@ham-cert.local",
     name: "Bruno Demonstração",
     city: "Campinas",
     state: "SP",
@@ -39,7 +39,7 @@ const DEMO_USERS = [
   },
   {
     callsign: "PY3DEM",
-    email: "demo-participante@grasp-cert.local",
+    email: "demo-participante@ham-cert.local",
     name: "Carla Demonstração",
     city: "Curitiba",
     state: "PR",
@@ -49,7 +49,7 @@ const DEMO_USERS = [
     // Sem cargo global nenhum: existe para exercitar o admin de GRUPO, que é
     // quem administra o próprio clube sem administrar a plataforma.
     callsign: "PY4DEM",
-    email: "demo-grupo@grasp-cert.local",
+    email: "demo-grupo@ham-cert.local",
     name: "Diego Demonstração",
     city: "Porto Alegre",
     state: "RS",

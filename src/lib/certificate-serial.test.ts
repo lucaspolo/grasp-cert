@@ -23,10 +23,10 @@ describe("certificateSerial", () => {
     expect(certificateSerial("operator", "evt-1", "PY2ABC")).not.toBe(base);
   });
 
-  it("usa o formato GC-XXXX-XXXX sem caracteres ambíguos", () => {
+  it("usa o formato HC-XXXX-XXXX sem caracteres ambíguos", () => {
     const serial = certificateSerial("participant", "evt-1", "PY2ABC");
 
-    expect(serial).toMatch(/^GC-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/);
+    expect(serial).toMatch(/^HC-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/);
     expect(serial.slice(3)).not.toMatch(/[ILOU]/);
   });
 
@@ -36,7 +36,7 @@ describe("certificateSerial", () => {
       certificateSerial("participant", "evt-1", "PY2ABC")
     );
     expect(certificateSerial("participant", "evt-smoke", "PY2ABC")).toBe(
-      "GC-SVX9-DR0P"
+      "HC-1JCY-2SSM"
     );
   });
 });
