@@ -1,4 +1,4 @@
-.PHONY: dev build install up down db-migrate db-push db-seed db-studio start test
+.PHONY: dev build install up down db-migrate db-push db-seed db-seed-demo db-studio start test
 
 test:
 	pnpm test
@@ -32,6 +32,10 @@ db-push:
 
 db-seed:
 	pnpm prisma db seed
+
+# Dados fictícios para desenvolvimento (usuários de cada papel, evento e QSOs).
+db-seed-demo:
+	pnpm tsx prisma/seed-demo.ts
 
 db-studio:
 	pnpm prisma studio
