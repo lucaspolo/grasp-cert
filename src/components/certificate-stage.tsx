@@ -29,7 +29,6 @@ export function CertificateStage({
   verifyUrl,
   bgSrc,
   qrSrc,
-  watermarkSrc,
   selected,
   onSelect,
   onMove,
@@ -42,7 +41,6 @@ export function CertificateStage({
   verifyUrl: string;
   bgSrc: string | null;
   qrSrc: string;
-  watermarkSrc: string;
   selected: string | null;
   onSelect: (key: string | null) => void;
   onMove: (key: string, x: number, y: number) => void;
@@ -192,7 +190,6 @@ export function CertificateStage({
         verifyUrl={verifyUrl}
         bgSrc={bgSrc}
         qrSrc={qrSrc}
-        watermarkSrc={watermarkSrc}
         scale={scale}
       />
 

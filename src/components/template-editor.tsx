@@ -229,8 +229,8 @@ export function TemplateEditor({
           <CardTitle>Imagem de Fundo</CardTitle>
           <CardDescription>
             PNG, JPEG ou WebP — mínimo 800×500, máximo 1920×1200, até 5 MB. Sem
-            imagem, o certificado usa o fundo amarelo padrão com selo, borda e
-            marca d&apos;água; com imagem, esses elementos dão lugar à sua arte.
+            imagem, o certificado usa o fundo amarelo padrão com selo e borda;
+            com imagem, esses elementos dão lugar à sua arte.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -329,7 +329,6 @@ export function TemplateEditor({
               verifyUrl={SAMPLE_VERIFY_URL}
               bgSrc={bgImageUrl}
               qrSrc={qrSrc}
-              watermarkSrc="/logo_grasp.png"
               selected={selected}
               onSelect={setSelected}
               onMove={moveField}
