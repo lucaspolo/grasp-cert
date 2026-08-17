@@ -214,7 +214,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
           src: "/ajuda/10-home-publica.webp",
           alt: 'Página inicial com as seções Acontecendo agora e Em breve, cada evento num cartão',
           width: 1120,
-          height: 740,
+          height: 737,
         },
       },
       {
@@ -223,7 +223,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
           src: "/ajuda/11-evento-estatisticas.webp",
           alt: "Página de estatísticas do evento com os cartões Total de QSOs e Participantes e o ranking por indicativo",
           width: 1120,
-          height: 700,
+          height: 705,
         },
       },
     ],
@@ -242,7 +242,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
           src: "/ajuda/30-eventos-operador.webp",
           alt: "Lista de eventos vista por um operador, com apenas um evento e somente a ação QSOs",
           width: 1120,
-          height: 240,
+          height: 245,
         },
       },
       {
@@ -251,7 +251,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
           src: "/ajuda/31-qsos-do-evento.webp",
           alt: "Tela de QSOs do evento com o formulário Adicionar QSO, o painel Importar ADIF e a tabela de contatos",
           width: 1120,
-          height: 800,
+          height: 737,
         },
       },
       {
@@ -375,7 +375,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
           src: "/ajuda/40-eventos-admin.webp",
           alt: "Lista de eventos vista por um administrador, com o botão Novo Evento e as ações Editar e Excluir",
           width: 1120,
-          height: 310,
+          height: 355,
         },
       },
       {
@@ -454,7 +454,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
           src: "/ajuda/47-template-imagem-fundo.webp",
           alt: "Cartão de imagem de fundo do template com o seletor de arquivo e o botão Enviar",
           width: 1095,
-          height: 330,
+          height: 340,
         },
       },
       {
@@ -463,7 +463,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
           src: "/ajuda/48-editor-template.webp",
           alt: "Editor visual do template com o campo Indicativo selecionado no certificado e o painel de ajustes ao lado",
           width: 1095,
-          height: 765,
+          height: 597,
           caption:
             "A âncora define que ponto do texto fica no X — é o que decide para que lado o campo cresce quando o dado real for mais longo que o exemplo.",
         },
@@ -510,7 +510,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
           src: "/ajuda/52-auditoria-lista.webp",
           alt: "Tela de auditoria com as colunas Data, Autor, Ação e Resumo",
           width: 1120,
-          height: 330,
+          height: 380,
         },
       },
       {
@@ -519,7 +519,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
           src: "/ajuda/53-auditoria-detalhes.webp",
           alt: "Registro de auditoria expandido mostrando os detalhes em JSON",
           width: 1120,
-          height: 440,
+          height: 470,
         },
       },
     ],
