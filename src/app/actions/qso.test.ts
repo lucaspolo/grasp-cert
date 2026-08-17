@@ -16,6 +16,7 @@ vi.mock("@/lib/prisma", () => ({
       findUnique: vi.fn(),
     },
     eventOperator: { findUnique: vi.fn() },
+    groupMember: { findFirst: vi.fn() },
   },
 }));
 
@@ -32,6 +33,7 @@ const updateMock = prisma.qSO.update as unknown as Mock;
 const deleteMock = prisma.qSO.delete as unknown as Mock;
 const findQsoMock = prisma.qSO.findUnique as unknown as Mock;
 const eventOperatorMock = prisma.eventOperator.findUnique as unknown as Mock;
+const groupMemberMock = prisma.groupMember.findFirst as unknown as Mock;
 const recordAuditMock = recordAudit as unknown as Mock;
 
 function form(entries: Record<string, string>): FormData {
@@ -81,6 +83,9 @@ beforeEach(() => {
   eventModeMock.mockResolvedValue({ eventId: "evt-1", modeId: "mode-ssb" });
   findQsoMock.mockResolvedValue(storedQso);
   eventOperatorMock.mockResolvedValue({ eventId: "evt-1", userId: "u2" });
+  // Ninguém aqui é admin do grupo do evento por padrão: os casos deste arquivo
+  // são sobre cargo global e designação de operador.
+  groupMemberMock.mockResolvedValue(null);
   // clearAllMocks limpa chamadas, não implementações: redefinir evita que um
   // mockRejectedValue de um teste vaze para o seguinte.
   createMock.mockResolvedValue({ id: "qso-1" });

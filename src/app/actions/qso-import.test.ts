@@ -8,6 +8,7 @@ vi.mock("@/lib/prisma", () => ({
     event: { findUnique: vi.fn() },
     qSO: { createMany: vi.fn() },
     eventOperator: { findUnique: vi.fn() },
+    groupMember: { findFirst: vi.fn() },
     auditLog: { create: vi.fn() },
   },
 }));
@@ -51,6 +52,7 @@ beforeEach(() => {
     user: { id: "u1", role: "ADMIN", callsign: "PY2ADM" },
   });
   eventFindMock.mockResolvedValue(EVENT);
+  (prisma.groupMember.findFirst as unknown as Mock).mockResolvedValue(null);
 });
 
 describe("importQSOs", () => {

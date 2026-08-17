@@ -28,7 +28,28 @@ async function main() {
 
   console.log(`Seed: admin user created → ${admin.callsign} (${admin.email})`);
 
-  // Seed default template
+  // Grupo inicial. A migração 20260817153000_add_groups cria o mesmo registro
+  // ao converter uma base existente; aqui o upsert por nome cobre a instalação
+  // do zero sem duplicar.
+  const group = await prisma.group.upsert({
+    where: { name: "GRASP" },
+    update: {},
+    create: {
+      name: "GRASP",
+      description: "Grupo inicial do sistema.",
+    },
+  });
+  console.log(`Seed: group → ${group.name} (${group.id})`);
+
+  await prisma.groupMember.upsert({
+    where: { groupId_userId: { groupId: group.id, userId: admin.id } },
+    update: { role: "ADMIN" },
+    create: { groupId: group.id, userId: admin.id, role: "ADMIN" },
+  });
+  console.log(`Seed: ${admin.callsign} é admin do grupo ${group.name}`);
+
+  // Template padrão: fica GLOBAL (sem grupo) de propósito — é o fallback de
+  // todo evento sem template próprio, em qualquer grupo.
   const existing = await prisma.template.findFirst({
     where: { name: "Padrão" },
   });

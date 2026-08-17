@@ -5,10 +5,22 @@ import { prisma } from "@/lib/prisma";
 export const JWT_REFRESH_INTERVAL_SECONDS = 10 * 60;
 
 /**
+ * O usuário é ADMIN de ao menos um grupo? Vira o claim `groupAdmin`, que o
+ * proxy (Edge, sem Prisma) usa para liberar /admin a quem não tem cargo global.
+ */
+export async function isAdminOfSomeGroup(userId: string): Promise<boolean> {
+  const membership = await prisma.groupMember.findFirst({
+    where: { userId, role: "ADMIN" },
+    select: { id: true },
+  });
+  return membership !== null;
+}
+
+/**
  * Revalida os claims do JWT contra o banco quando estão mais velhos que
  * JWT_REFRESH_INTERVAL_SECONDS. Retorna:
  * - o token intacto, se ainda está fresco;
- * - o token com role/callsign atualizados, se o usuário ainda existe;
+ * - o token com role/callsign/groupAdmin atualizados, se o usuário ainda existe;
  * - null (invalida a sessão), se o usuário foi excluído ou se a
  *   sessionVersion mudou (ex.: reset de senha).
  *
@@ -48,6 +60,7 @@ export async function refreshTokenClaims(token: JWT): Promise<JWT | null> {
     role: user.role,
     callsign: user.callsign,
     sessionVersion: user.sessionVersion,
+    groupAdmin: await isAdminOfSomeGroup(token.id),
     refreshedAt: now,
   };
 }

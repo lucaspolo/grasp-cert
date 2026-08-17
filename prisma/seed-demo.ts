@@ -45,7 +45,20 @@ const DEMO_USERS = [
     state: "PR",
     role: "USER" as const,
   },
+  {
+    // Sem cargo global nenhum: existe para exercitar o admin de GRUPO, que é
+    // quem administra o próprio clube sem administrar a plataforma.
+    callsign: "PY4DEM",
+    email: "demo-grupo@grasp-cert.local",
+    name: "Diego Demonstração",
+    city: "Porto Alegre",
+    state: "RS",
+    role: "USER" as const,
+  },
 ];
+
+const GRUPO_PRINCIPAL = "GRASP";
+const GRUPO_SECUNDARIO = "Clube Demo";
 
 const EVENT_ATUAL = "demo-evt-atual";
 const EVENT_FUTURO = "demo-evt-futuro";
@@ -122,19 +135,63 @@ async function main() {
     console.log(`Demo: usuário ${u.callsign} (${u.role})`);
   }
 
-  // 2. Template extra, para a lista de templates ter mais de uma linha.
+  // 2. Grupos. O GRASP vem do seed base; o "Clube Demo" existe para que as
+  //    telas mostrem mais de um grupo e para exercitar o admin de grupo.
+  const grupoPrincipal = await prisma.group.upsert({
+    where: { name: GRUPO_PRINCIPAL },
+    update: {},
+    create: { name: GRUPO_PRINCIPAL, description: "Grupo inicial do sistema." },
+  });
+
+  const grupoSecundario = await prisma.group.upsert({
+    where: { name: GRUPO_SECUNDARIO },
+    update: {},
+    create: {
+      name: GRUPO_SECUNDARIO,
+      callsign: "PY4DEM",
+      description: "Segundo grupo, para demonstrar a separação por clube.",
+    },
+  });
+  console.log(`Demo: grupos ${grupoPrincipal.name} e ${grupoSecundario.name}`);
+
+  // Quadro de sócios: PY1DEM administra o GRASP, PY4DEM administra o Clube
+  // Demo (sem cargo global), os demais entram como membros.
+  const membros: { callsign: string; groupId: string; role: "ADMIN" | "MEMBER" }[] = [
+    { callsign: "PY1DEM", groupId: grupoPrincipal.id, role: "ADMIN" },
+    { callsign: "PY2DEM", groupId: grupoPrincipal.id, role: "MEMBER" },
+    { callsign: "PY3DEM", groupId: grupoPrincipal.id, role: "MEMBER" },
+    { callsign: "PY4DEM", groupId: grupoSecundario.id, role: "ADMIN" },
+  ];
+
+  for (const m of membros) {
+    const user = await prisma.user.findUnique({ where: { callsign: m.callsign } });
+    if (!user) throw new Error(`Usuário ${m.callsign} não encontrado.`);
+    await prisma.groupMember.upsert({
+      where: { groupId_userId: { groupId: m.groupId, userId: user.id } },
+      update: { role: m.role },
+      create: { groupId: m.groupId, userId: user.id, role: m.role },
+    });
+  }
+  console.log(`Demo: ${membros.length} vínculos de grupo`);
+
+  // 3. Template extra, do Clube Demo, para a lista ter mais de uma linha e
+  //    mostrar a coluna de grupo preenchida.
   //    Template.name não é @unique — a busca é por nome, como no seed base.
   const demoTemplate =
     (await prisma.template.findFirst({ where: { name: "Demo Azul" } })) ??
     (await prisma.template.create({
       data: { name: "Demo Azul", config: DEFAULT_TEMPLATE_CONFIG },
     }));
-  console.log(`Demo: template ${demoTemplate.name}`);
+  await prisma.template.update({
+    where: { id: demoTemplate.id },
+    data: { groupId: grupoSecundario.id },
+  });
+  console.log(`Demo: template ${demoTemplate.name} (${grupoSecundario.name})`);
 
   const padrao = await prisma.template.findFirst({ where: { name: "Padrão" } });
 
-  // 3. Eventos. O "atual" precisa estar em andamento para aparecer em
-  //    "Acontecendo agora" na home; o outro, no futuro, para "Em breve".
+  // 4. Eventos, um por grupo. O "atual" precisa estar em andamento para
+  //    aparecer em "Acontecendo agora" na home; o outro, no futuro, em "Em breve".
   const day = 24 * 60 * 60 * 1000;
   const now = new Date();
   const startAtual = new Date(now.getTime() - 10 * day);
@@ -142,10 +199,15 @@ async function main() {
 
   await prisma.event.upsert({
     where: { id: EVENT_ATUAL },
-    update: { startDate: startAtual, endDate: endAtual },
+    update: {
+      startDate: startAtual,
+      endDate: endAtual,
+      groupId: grupoPrincipal.id,
+    },
     create: {
       id: EVENT_ATUAL,
       name: "Concurso Demo GRASP 2026",
+      groupId: grupoPrincipal.id,
       startDate: startAtual,
       endDate: endAtual,
       templateId: padrao?.id ?? null,
@@ -159,10 +221,12 @@ async function main() {
     update: {
       startDate: new Date(now.getTime() + 45 * day),
       endDate: new Date(now.getTime() + 47 * day),
+      groupId: grupoSecundario.id,
     },
     create: {
       id: EVENT_FUTURO,
       name: "Copa Demo de Inverno",
+      groupId: grupoSecundario.id,
       startDate: new Date(now.getTime() + 45 * day),
       endDate: new Date(now.getTime() + 47 * day),
       templateId: demoTemplate.id,
@@ -171,7 +235,7 @@ async function main() {
   });
   console.log("Demo: eventos criados/atualizados");
 
-  // 4. Bandas e modos habilitados no evento atual.
+  // 5. Bandas e modos habilitados no evento atual.
   for (const name of EVENT_BANDS) {
     const band = await prisma.band.findUnique({ where: { name } });
     if (!band) throw new Error(`Banda ${name} não existe — rode 'make db-seed' antes.`);
@@ -193,7 +257,7 @@ async function main() {
   }
   console.log("Demo: bandas e modos vinculados ao evento");
 
-  // 5. O operador designado ao evento — sem isso ele não enxerga nada em
+  // 6. O operador designado ao evento — sem isso ele não enxerga nada em
   //    /admin/events.
   const operador = await prisma.user.findUnique({ where: { callsign: "PY2DEM" } });
   if (!operador) throw new Error("Usuário PY2DEM não encontrado.");
@@ -204,7 +268,7 @@ async function main() {
   });
   console.log("Demo: PY2DEM designado como operador do evento atual");
 
-  // 6. QSOs. IDs fixos para que reexecutar atualize as mesmas linhas em vez de
+  // 7. QSOs. IDs fixos para que reexecutar atualize as mesmas linhas em vez de
   //    esbarrar no @@unique(eventId, indicativo, dateTime, banda, modo).
   const base = new Date(
     Date.UTC(

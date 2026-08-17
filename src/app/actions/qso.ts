@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { requireRole, requireEventOperator } from "@/lib/auth-utils";
+import { requireEventAccess, type EventAccess } from "@/lib/group-access";
 import { recordAudit } from "@/lib/audit";
 import { parseBRDateTime, localToUTC } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
@@ -38,8 +38,6 @@ const qsoSchema = z.object({
   rstReceived: z.string().min(1, "RST recebido é obrigatório"),
   observations: z.string().optional(),
 });
-
-type QSOSession = Awaited<ReturnType<typeof requireRole>>;
 
 function parseQSOForm(formData: FormData) {
   return qsoSchema.safeParse({
@@ -80,19 +78,24 @@ async function validateEventBandMode(
 }
 
 /**
- * OWNER/ADMIN gerenciam qualquer QSO. OPERATOR só mexe nos próprios lançamentos
- * (operatorCallsign igual ao seu) e apenas em eventos aos quais está designado.
- * QSOs sem operatorCallsign (importações antigas) ficam restritos a OWNER/ADMIN.
+ * Quem administra a plataforma ou o grupo dono do evento gerencia qualquer
+ * QSO. O operador designado só mexe nos próprios lançamentos (operatorCallsign
+ * igual ao seu) — QSOs sem operatorCallsign (importações antigas) ficam
+ * restritos a quem administra.
+ *
+ * O acesso ao evento já foi conferido por `requireEventAccess`; aqui só resta
+ * a regra de autoria.
  */
-async function assertQSOAccess(
-  session: QSOSession,
-  qso: { eventId: string; operatorCallsign: string | null }
+function assertQSOAuthorship(
+  access: EventAccess,
+  qso: { operatorCallsign: string | null }
 ) {
-  if (session.user.role !== "OPERATOR") return;
+  if (access.scope !== "operator") return;
 
-  await requireEventOperator(qso.eventId, session.user.id);
-
-  if (!qso.operatorCallsign || qso.operatorCallsign !== session.user.callsign) {
+  if (
+    !qso.operatorCallsign ||
+    qso.operatorCallsign !== access.session.user.callsign
+  ) {
     throw new Error("Forbidden");
   }
 }
@@ -102,12 +105,7 @@ export async function createQSO(
   _prevState: QSOFormState,
   formData: FormData
 ): Promise<QSOFormState> {
-  const session = await requireRole(["OWNER", "ADMIN", "OPERATOR"]);
-
-  // OPERATORs can only create QSOs for events they are assigned to
-  if (session.user.role === "OPERATOR") {
-    await requireEventOperator(eventId, session.user.id);
-  }
+  const { session } = await requireEventAccess(eventId);
 
   const parsed = parseQSOForm(formData);
 
@@ -165,7 +163,8 @@ export async function updateQSO(
   _prevState: QSOFormState,
   formData: FormData
 ): Promise<QSOFormState> {
-  const session = await requireRole(["OWNER", "ADMIN", "OPERATOR"]);
+  const access = await requireEventAccess(eventId);
+  const session = access.session;
 
   const qso = await prisma.qSO.findUnique({
     where: { id: qsoId },
@@ -188,7 +187,7 @@ export async function updateQSO(
   // O eventId vem da URL/formulário: se não bater com o do registro, é adulteração.
   if (qso.eventId !== eventId) throw new Error("Forbidden");
 
-  await assertQSOAccess(session, qso);
+  assertQSOAuthorship(access, qso);
 
   const parsed = parseQSOForm(formData);
 
@@ -267,7 +266,8 @@ function normalizeForDiff(value: unknown): string {
 }
 
 export async function deleteQSO(qsoId: string, eventId: string) {
-  const session = await requireRole(["OWNER", "ADMIN", "OPERATOR"]);
+  const access = await requireEventAccess(eventId);
+  const session = access.session;
 
   const qso = await prisma.qSO.findUnique({
     where: { id: qsoId },
@@ -283,7 +283,7 @@ export async function deleteQSO(qsoId: string, eventId: string) {
 
   if (qso.eventId !== eventId) throw new Error("Forbidden");
 
-  await assertQSOAccess(session, qso);
+  assertQSOAuthorship(access, qso);
 
   await prisma.qSO.delete({ where: { id: qsoId } });
 
@@ -303,7 +303,7 @@ export async function deleteQSO(qsoId: string, eventId: string) {
 }
 
 export async function listQSOsByEvent(eventId: string) {
-  await requireRole(["OWNER", "ADMIN", "OPERATOR"]);
+  await requireEventAccess(eventId);
   return prisma.qSO.findMany({
     where: { eventId },
     orderBy: { dateTime: "desc" },

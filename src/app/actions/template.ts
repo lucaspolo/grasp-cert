@@ -1,7 +1,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/auth-utils";
+import { requireSession } from "@/lib/auth-utils";
+import { assertGroupAdmin, requireAnyGroupAdmin } from "@/lib/group-access";
 import { recordAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -37,6 +38,27 @@ const templateNameSchema = z.object({
 });
 
 /**
+ * Carrega o dono do template e confere se a sessão pode administrá-lo.
+ * Devolve null quando o template não existe — quem chama decide a mensagem.
+ */
+async function loadTemplateForAdmin(templateId: string) {
+  const { session } = await requireAnyGroupAdmin();
+
+  const template = await prisma.template.findUnique({
+    where: { id: templateId },
+    select: {
+      name: true,
+      groupId: true,
+      _count: { select: { events: true } },
+    },
+  });
+  if (!template) return null;
+
+  await assertGroupAdmin(session, template.groupId);
+  return { session, template };
+}
+
+/**
  * Nome do template usado como fallback global: `loadCertificateData` o procura
  * por nome quando o evento não tem template. Renomeá-lo ou excluí-lo derruba o
  * certificado de todo evento sem template — daí as guardas abaixo.
@@ -58,39 +80,67 @@ export type TemplateFormState = {
 
 // --- CRUD ---
 
+/** Templates que a sessão pode EDITAR — os do seu grupo, e os globais se for admin da plataforma. */
 export async function listTemplates() {
-  await requireRole(["OWNER", "ADMIN"]);
+  const { groupIds } = await requireAnyGroupAdmin();
   return prisma.template.findMany({
+    where: groupIds ? { groupId: { in: groupIds } } : undefined,
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
       name: true,
       bgMimeType: true,
       createdAt: true,
+      group: { select: { id: true, name: true } },
       _count: { select: { events: true } },
     },
   });
 }
 
+/**
+ * Templates que os eventos da sessão podem USAR: os dos grupos administrados
+ * mais os globais da plataforma. Diferente de `listTemplates`, que traz só o
+ * que dá para editar — um grupo escolhe o "Padrão" sem poder mexer nele.
+ *
+ * O `groupId` de cada linha vai junto porque o formulário de evento filtra a
+ * lista pelo grupo escolhido.
+ */
+export async function listSelectableTemplates() {
+  const { groupIds } = await requireAnyGroupAdmin();
+  return prisma.template.findMany({
+    where: groupIds
+      ? { OR: [{ groupId: { in: groupIds } }, { groupId: null }] }
+      : undefined,
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, groupId: true },
+  });
+}
+
 export async function getTemplate(id: string) {
-  await requireRole(["OWNER", "ADMIN"]);
-  return prisma.template.findUnique({
+  const { session } = await requireAnyGroupAdmin();
+
+  const template = await prisma.template.findUnique({
     where: { id },
     select: {
       id: true,
       name: true,
+      groupId: true,
       bgMimeType: true,
       config: true,
       _count: { select: { events: true } },
     },
   });
+  if (!template) return null;
+
+  await assertGroupAdmin(session, template.groupId);
+  return template;
 }
 
 export async function createTemplate(
   _prevState: TemplateFormState,
   formData: FormData
 ): Promise<TemplateFormState> {
-  const session = await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireSession();
 
   const parsed = templateNameSchema.safeParse({
     name: formData.get("name"),
@@ -100,8 +150,25 @@ export async function createTemplate(
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
+  // Campo vazio = template global da plataforma; `assertGroupAdmin` recusa
+  // isso para quem não é OWNER/ADMIN global.
+  const groupId = ((formData.get("groupId") as string) || "").trim() || null;
+  try {
+    await assertGroupAdmin(session, groupId);
+  } catch {
+    return {
+      errors: {
+        groupId: [
+          groupId
+            ? "Você não administra este grupo."
+            : "Só quem administra a plataforma cria template global.",
+        ],
+      },
+    };
+  }
+
   const template = await prisma.template.create({
-    data: { name: parsed.data.name },
+    data: { name: parsed.data.name, groupId },
   });
 
   await recordAudit(session.user, {
@@ -109,6 +176,7 @@ export async function createTemplate(
     entityType: "template",
     entityId: template.id,
     summary: `Template ${template.name} criado`,
+    details: { groupId },
   });
 
   redirect(`/admin/templates/${template.id}/edit`);
@@ -119,8 +187,6 @@ export async function updateTemplateName(
   _prevState: TemplateFormState,
   formData: FormData
 ): Promise<TemplateFormState> {
-  const session = await requireRole(["OWNER", "ADMIN"]);
-
   const parsed = templateNameSchema.safeParse({
     name: formData.get("name"),
   });
@@ -129,12 +195,13 @@ export async function updateTemplateName(
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
-  const previous = await prisma.template.findUnique({
-    where: { id: templateId },
-    select: { name: true },
-  });
+  const loaded = await loadTemplateForAdmin(templateId);
+  if (!loaded) {
+    return { errors: { name: ["Template não encontrado."] } };
+  }
+  const { session, template: previous } = loaded;
 
-  if (previous?.name === FALLBACK_TEMPLATE_NAME) {
+  if (previous.name === FALLBACK_TEMPLATE_NAME) {
     return {
       errors: {
         name: [
@@ -160,8 +227,8 @@ export async function updateTemplateName(
     action: "template.renamed",
     entityType: "template",
     entityId: templateId,
-    summary: `Template renomeado de ${previous?.name ?? "?"} para ${parsed.data.name}`,
-    details: { from: previous?.name, to: parsed.data.name },
+    summary: `Template renomeado de ${previous.name} para ${parsed.data.name}`,
+    details: { from: previous.name, to: parsed.data.name },
   });
 
   revalidatePath(`/admin/templates/${templateId}/edit`);
@@ -170,16 +237,11 @@ export async function updateTemplateName(
 }
 
 export async function deleteTemplate(templateId: string) {
-  const session = await requireRole(["OWNER", "ADMIN"]);
-
-  const template = await prisma.template.findUnique({
-    where: { id: templateId },
-    select: { name: true, _count: { select: { events: true } } },
-  });
-
-  if (!template) {
+  const loaded = await loadTemplateForAdmin(templateId);
+  if (!loaded) {
     return { error: "Template não encontrado." };
   }
+  const { session, template } = loaded;
 
   if (template.name === FALLBACK_TEMPLATE_NAME) {
     return {
@@ -224,7 +286,13 @@ const MAX_HEIGHT = 1200;
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export async function uploadTemplateBg(templateId: string, formData: FormData) {
-  const session = await requireRole(["OWNER", "ADMIN"]);
+  // Antes de qualquer trabalho com a imagem: decodificar e re-encodar um
+  // arquivo de 5MB para depois recusar a gravação seria trabalho à toa.
+  const loaded = await loadTemplateForAdmin(templateId);
+  if (!loaded) {
+    return { error: "Template não encontrado." };
+  }
+  const { session } = loaded;
 
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) {
@@ -310,7 +378,11 @@ export async function uploadTemplateBg(templateId: string, formData: FormData) {
 
 /** Volta o template ao fundo padrão. Sem isso, subir uma arte é irreversível. */
 export async function clearTemplateBg(templateId: string) {
-  const session = await requireRole(["OWNER", "ADMIN"]);
+  const loaded = await loadTemplateForAdmin(templateId);
+  if (!loaded) {
+    return { error: "Template não encontrado." };
+  }
+  const { session } = loaded;
 
   let template;
   try {
@@ -343,8 +415,6 @@ export async function saveTemplateConfig(
   templateId: string,
   config: TemplateConfig
 ) {
-  const session = await requireRole(["OWNER", "ADMIN"]);
-
   const parsed = templateConfigSchema.safeParse(config);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
@@ -352,6 +422,12 @@ export async function saveTemplateConfig(
       error: `Configuração inválida em ${issue.path.join(".")}: ${issue.message}`,
     };
   }
+
+  const loaded = await loadTemplateForAdmin(templateId);
+  if (!loaded) {
+    return { error: "Template não encontrado." };
+  }
+  const { session } = loaded;
 
   let template;
   try {

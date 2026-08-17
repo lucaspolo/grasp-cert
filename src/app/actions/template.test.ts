@@ -12,6 +12,10 @@ vi.mock("@/lib/prisma", () => ({
       update: vi.fn(),
       delete: vi.fn(),
     },
+    groupMember: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+    },
   },
 }));
 
@@ -50,10 +54,15 @@ beforeEach(() => {
   });
   findMock.mockResolvedValue({
     name: "Contest",
+    groupId: "grp-1",
     _count: { events: 0 },
   });
   updateMock.mockResolvedValue({ name: "Contest" });
   deleteMock.mockResolvedValue({ id: "tpl-1" });
+  // Sem vínculo de grupo por padrão: os testes deste arquivo exercitam o cargo
+  // global, e quem não tem nenhum dos dois deve ser barrado.
+  (prisma.groupMember.findMany as unknown as Mock).mockResolvedValue([]);
+  (prisma.groupMember.findUnique as unknown as Mock).mockResolvedValue(null);
 });
 
 /**

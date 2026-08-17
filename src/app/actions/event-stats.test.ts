@@ -38,6 +38,7 @@ describe("getPublicEventStats", () => {
       startDate: new Date("2026-07-25T00:00:00Z"),
       endDate: new Date("2026-07-26T00:00:00Z"),
       observations: "Observação pública do evento",
+      group: { name: "GRASP" },
       eventBands: [{ band: { label: "40 m" } }],
       eventModes: [{ mode: { label: "SSB" } }],
     });
@@ -52,6 +53,7 @@ describe("getPublicEventStats", () => {
     expect(result).toEqual({
       id: "evt-1",
       name: "Concurso Teste",
+      groupName: "GRASP",
       startDate: new Date("2026-07-25T00:00:00Z"),
       endDate: new Date("2026-07-26T00:00:00Z"),
       observations: "Observação pública do evento",
@@ -73,6 +75,7 @@ describe("getPublicEventStats", () => {
       startDate: new Date(),
       endDate: new Date(),
       observations: null,
+      group: { name: "GRASP" },
       eventBands: [],
       eventModes: [],
     });
@@ -99,6 +102,7 @@ describe("getPublicEventStats", () => {
       startDate: new Date(),
       endDate: new Date(),
       observations: null,
+      group: { name: "GRASP" },
       eventBands: [],
       eventModes: [],
     });

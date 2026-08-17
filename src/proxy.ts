@@ -6,14 +6,39 @@ const { auth } = NextAuth(authConfig);
 
 type AppRole = "OWNER" | "ADMIN" | "OPERATOR" | "USER";
 
-const ROUTE_ROLES: { pattern: RegExp; roles: AppRole[] }[] = [
+/**
+ * Recorte grosseiro de acesso às telas administrativas — quem entra na rota,
+ * não o que enxerga dentro dela. O filtro por grupo é feito no servidor, em
+ * cada action (`src/lib/group-access.ts`).
+ *
+ * `groupAdmin` libera as rotas de grupo a quem administra ao menos um clube
+ * sem ter cargo global: aqui, no Edge, não há Prisma para consultar o quadro
+ * de membros, então a informação chega pelo claim do JWT.
+ */
+type RouteRule = {
+  pattern: RegExp;
+  roles: AppRole[];
+  /** Também vale para admin de grupo, qualquer que seja o cargo global. */
+  allowGroupAdmin?: boolean;
+};
+
+const ROUTE_ROLES: RouteRule[] = [
   { pattern: /^\/admin\/users/, roles: ["OWNER"] },
   { pattern: /^\/admin\/audit/, roles: ["OWNER"] },
-  { pattern: /^\/admin\/templates/, roles: ["OWNER", "ADMIN"] },
+  { pattern: /^\/admin\/groups/, roles: ["OWNER", "ADMIN"], allowGroupAdmin: true },
+  { pattern: /^\/admin\/templates/, roles: ["OWNER", "ADMIN"], allowGroupAdmin: true },
   { pattern: /^\/admin\/bands/, roles: ["OWNER", "ADMIN"] },
   { pattern: /^\/admin\/modes/, roles: ["OWNER", "ADMIN"] },
-  { pattern: /^\/admin\/events/, roles: ["OWNER", "ADMIN", "OPERATOR"] },
-  { pattern: /^\/admin/, roles: ["OWNER", "ADMIN", "OPERATOR"] },
+  {
+    pattern: /^\/admin\/events/,
+    roles: ["OWNER", "ADMIN", "OPERATOR"],
+    allowGroupAdmin: true,
+  },
+  {
+    pattern: /^\/admin/,
+    roles: ["OWNER", "ADMIN", "OPERATOR"],
+    allowGroupAdmin: true,
+  },
 ];
 
 export default auth((req) => {
@@ -57,9 +82,13 @@ export default auth((req) => {
 
   // Role-based route protection
   const userRole = req.auth?.user?.role as AppRole | undefined;
+  const isGroupAdmin = req.auth?.user?.groupAdmin === true;
   for (const rule of ROUTE_ROLES) {
     if (rule.pattern.test(pathname)) {
-      if (!userRole || !rule.roles.includes(userRole)) {
+      const allowed =
+        (!!userRole && rule.roles.includes(userRole)) ||
+        (rule.allowGroupAdmin === true && isGroupAdmin);
+      if (!allowed) {
         return NextResponse.redirect(new URL("/", req.nextUrl));
       }
       break;

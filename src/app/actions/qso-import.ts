@@ -2,7 +2,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requireRole, requireEventOperator } from "@/lib/auth-utils";
+import { requireEventAccess } from "@/lib/group-access";
 import { recordAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { mapAdifRecord, parseAdif } from "@/lib/adif";
@@ -32,10 +32,7 @@ export async function importQSOs(
   _prevState: ImportState,
   formData: FormData
 ): Promise<ImportState> {
-  const session = await requireRole(["OWNER", "ADMIN", "OPERATOR"]);
-  if (session.user.role === "OPERATOR") {
-    await requireEventOperator(eventId, session.user.id);
-  }
+  const { session } = await requireEventAccess(eventId);
 
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) {

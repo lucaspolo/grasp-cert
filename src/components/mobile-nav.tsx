@@ -8,15 +8,23 @@ import { ThemeToggle } from "./theme-toggle";
 type MobileNavProps = {
   callsign: string;
   role: string;
+  /** Admin de ao menos um grupo — pode não ter cargo global. */
+  isGroupAdmin?: boolean;
   signOutAction: () => Promise<void>;
 };
 
-export function MobileNav({ callsign, role, signOutAction }: MobileNavProps) {
+export function MobileNav({
+  callsign,
+  role,
+  isGroupAdmin = false,
+  signOutAction,
+}: MobileNavProps) {
   const [open, setOpen] = useState(false);
 
   const isOwner = role === "OWNER";
   const isOwnerOrAdmin = isOwner || role === "ADMIN";
-  const hasAdminAccess = isOwnerOrAdmin || role === "OPERATOR";
+  const hasAdminAccess = isOwnerOrAdmin || role === "OPERATOR" || isGroupAdmin;
+  const canManageGroups = isOwnerOrAdmin || isGroupAdmin;
 
   return (
     <div className="md:hidden">
@@ -68,13 +76,18 @@ export function MobileNav({ callsign, role, signOutAction }: MobileNavProps) {
                   Eventos
                 </NavLink>
               )}
+              {canManageGroups && (
+                <NavLink href="/admin/groups" onClick={() => setOpen(false)}>
+                  Grupos
+                </NavLink>
+              )}
               {/* Último item de primeiro nível, antes da subseção: aqui o grupo
                   "Configurações" é expandido em linha e nada marca o fim dele,
                   então um link depois de "Modos" leria como quarto item dele. */}
               <NavLink href="/ajuda" onClick={() => setOpen(false)}>
                 Ajuda
               </NavLink>
-              {isOwnerOrAdmin && (
+              {canManageGroups && (
                 <>
                   <div className="pt-3 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Configurações
@@ -82,12 +95,16 @@ export function MobileNav({ callsign, role, signOutAction }: MobileNavProps) {
                   <NavLink href="/admin/templates" onClick={() => setOpen(false)}>
                     Templates
                   </NavLink>
-                  <NavLink href="/admin/bands" onClick={() => setOpen(false)}>
-                    Bandas
-                  </NavLink>
-                  <NavLink href="/admin/modes" onClick={() => setOpen(false)}>
-                    Modos
-                  </NavLink>
+                  {isOwnerOrAdmin && (
+                    <>
+                      <NavLink href="/admin/bands" onClick={() => setOpen(false)}>
+                        Bandas
+                      </NavLink>
+                      <NavLink href="/admin/modes" onClick={() => setOpen(false)}>
+                        Modos
+                      </NavLink>
+                    </>
+                  )}
                 </>
               )}
             </nav>

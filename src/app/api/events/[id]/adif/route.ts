@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireRole, requireEventOperator } from "@/lib/auth-utils";
+import { requireEventAccess } from "@/lib/group-access";
 import { buildAdif } from "@/lib/adif";
 
 export const runtime = "nodejs";
@@ -17,7 +17,10 @@ function slugify(name: string): string {
   );
 }
 
-/** Exporta os QSOs de um evento em ADIF (.adi). Requer OWNER/ADMIN/OPERATOR. */
+/**
+ * Exporta os QSOs de um evento em ADIF (.adi). Aberto a quem administra a
+ * plataforma, a quem administra o grupo dono do evento e ao operador designado.
+ */
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -25,10 +28,7 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const session = await requireRole(["OWNER", "ADMIN", "OPERATOR"]);
-    if (session.user.role === "OPERATOR") {
-      await requireEventOperator(id, session.user.id);
-    }
+    await requireEventAccess(id);
   } catch {
     return new Response("Não autorizado.", { status: 403 });
   }

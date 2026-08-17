@@ -3,6 +3,7 @@ import { TemplateEditor } from "@/components/template-editor";
 import { TemplateNameForm } from "./template-name-form";
 import { mergeTemplateConfig } from "@/lib/template-config";
 import { SAMPLE_VERIFY_URL } from "@/lib/certificate-sample";
+import { pageRead } from "@/lib/group-access";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 
@@ -12,7 +13,9 @@ export default async function EditTemplatePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const template = await getTemplate(id);
+  // Template de outro grupo dá 404, não erro: quem não pode vê-lo não precisa
+  // saber que ele existe.
+  const template = await pageRead(() => getTemplate(id));
 
   if (!template) notFound();
 

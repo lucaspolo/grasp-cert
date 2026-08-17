@@ -4,11 +4,9 @@ import { QSOForm } from "@/components/qso-form";
 import { QSOImport } from "@/components/qso-import";
 import { QSOTable } from "@/components/qso-table";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { pageRead, requireEventAccess } from "@/lib/group-access";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import type { AppRole } from "@/lib/auth-utils";
+import { notFound } from "next/navigation";
 
 export default async function QSOsPage({
   params,
@@ -16,22 +14,17 @@ export default async function QSOsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const session = await auth();
-  const role = session?.user?.role as AppRole;
 
-  // OPERATORs must be assigned to this event
-  if (role === "OPERATOR") {
-    const assignment = await prisma.eventOperator.findUnique({
-      where: { eventId_userId: { eventId: id, userId: session!.user.id } },
-    });
-    if (!assignment) redirect("/admin/events");
-  }
+  // Um único porteiro para os três perfis: admin da plataforma, admin do grupo
+  // dono do evento e operador designado. Evento de outro grupo dá 404.
+  const { session, scope } = await pageRead(() => requireEventAccess(id));
 
   const event = await getEvent(id);
   if (!event) notFound();
 
   const qsos = await listQSOsByEvent(id);
-  const canManageAll = role === "OWNER" || role === "ADMIN";
+  // O operador só mexe nos próprios lançamentos; quem administra, em todos.
+  const canManageAll = scope !== "operator";
   const eventBands = event.eventBands.map((eb) => eb.band);
   const eventModes = event.eventModes.map((em) => em.mode);
 

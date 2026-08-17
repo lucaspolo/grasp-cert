@@ -76,6 +76,8 @@ function EventCard({
       <CardHeader>
         <CardTitle className="text-lg">{event.name}</CardTitle>
         <CardDescription>
+          {event.group.name}
+          <br />
           <LocalDateTime date={event.startDate} showTime /> — <LocalDateTime date={event.endDate} showTime />
         </CardDescription>
       </CardHeader>

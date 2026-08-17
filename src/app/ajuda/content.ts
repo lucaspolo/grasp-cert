@@ -231,8 +231,8 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
   {
     slug: "lancar-qsos",
     title: "6. Lançar QSOs de um evento",
-    audiences: ["OPERATOR", "ADMIN", "OWNER"],
-    note: "O operador só enxerga os eventos em que foi designado, e só pode editar ou excluir os QSOs que ele mesmo lançou. Admin e Owner enxergam todos.",
+    audiences: ["OPERATOR", "GROUP_ADMIN", "ADMIN", "OWNER"],
+    note: "O operador só enxerga os eventos em que foi designado, e só pode editar ou excluir os QSOs que ele mesmo lançou. O admin de grupo mexe em todos os QSOs dos eventos do seu grupo; Admin e Owner, em todos.",
     intro:
       'Depois de entrar, o menu ganha o item "Eventos". É por ali que se registram os contatos que dão direito ao certificado.',
     steps: [
@@ -271,8 +271,8 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
   {
     slug: "adif",
     title: "7. Importar e exportar ADIF",
-    audiences: ["OPERATOR", "ADMIN", "OWNER"],
-    note: "Vale a mesma regra da seção anterior: o operador só importa e exporta nos eventos em que foi designado.",
+    audiences: ["OPERATOR", "GROUP_ADMIN", "ADMIN", "OWNER"],
+    note: "Vale a mesma regra da seção anterior: o operador só importa e exporta nos eventos em que foi designado, e o admin de grupo, nos eventos do seu grupo.",
     intro:
       "Em vez de digitar contato por contato, envie o arquivo .adi que o seu logger (WSJT-X, N1MM e outros) já gera.",
     steps: [
@@ -306,7 +306,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
   {
     slug: "certificado-operador",
     title: "8. Baixar o certificado de operador",
-    audiences: ["OPERATOR", "ADMIN", "OWNER"],
+    audiences: ["OPERATOR", "GROUP_ADMIN", "ADMIN", "OWNER"],
     intro:
       'Quem lança contatos também ganha certificado. Em "Meus Certificados", abaixo dos seus certificados de participação, aparece o bloco "Eventos que você operou".',
     steps: [
@@ -331,14 +331,46 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
     ],
   },
   {
-    slug: "gerenciar-eventos",
-    title: "9. Criar e gerenciar eventos",
-    audiences: ["ADMIN", "OWNER"],
+    slug: "grupos",
+    title: "9. Grupos: quem organiza o quê",
+    audiences: ["GROUP_ADMIN", "ADMIN", "OWNER"],
+    note: "Criar e excluir grupos é da administração do sistema. Já o admin de um grupo cuida do seu: chama membros, cadastra templates e cria eventos — e não enxerga o acervo dos outros grupos.",
     intro:
-      "O administrador enxerga todos os eventos e ganha as ações de criar, editar e excluir, além de designar quem pode lançar QSOs.",
+      "Cada evento pertence a um grupo — o clube ou a entidade que o organiza. O grupo é dono dos seus eventos e dos seus templates, e tem os próprios admins, que respondem por ele sem precisar de cargo administrativo no sistema inteiro.",
     steps: [
       {
-        text: 'A lista completa traz o botão "Novo Evento" e, em cada linha, as ações Editar e Excluir.',
+        text: 'O menu "Grupos" lista os grupos de que você participa, com o número de membros, eventos e templates de cada um, e o seu cargo ali. Quem administra o sistema vê todos os grupos.',
+      },
+      {
+        text: 'Para abrir um grupo novo, use "Novo Grupo": informe o nome, opcionalmente o indicativo do clube e uma descrição. O campo do primeiro admin já entrega o grupo a alguém — informe o indicativo de quem vai cuidar dele. Sem isso, o grupo nasce sem dono e só a administração do sistema consegue mexer nele.',
+      },
+      {
+        text: 'Dentro do grupo, o bloco "Membros" recebe gente pelo indicativo — a pessoa precisa já ter conta no sistema. Escolha entre "Membro" e "Admin do grupo" na hora de adicionar, ou promova depois pelo botão da linha.',
+      },
+      {
+        text: "O admin do grupo cadastra templates e cria eventos para esse grupo. O membro comum não ganha nada com o vínculo além de constar no quadro — quem baixa certificado continua sendo qualquer participante com QSO no evento.",
+      },
+      {
+        text: "Um grupo nunca fica sem admin: rebaixar ou remover o último é recusado. Promova o substituto antes.",
+      },
+      {
+        text: "Excluir um grupo é do Owner e só funciona se ele estiver vazio — enquanto houver evento ou template, a exclusão é recusada, porque eles sustentam certificados já emitidos.",
+      },
+      {
+        text: "Se o seu cargo mudou ou você acabou de ser promovido a admin de um grupo, o menu pode levar alguns minutos para refletir isso. Sair e entrar de novo resolve na hora.",
+      },
+    ],
+  },
+  {
+    slug: "gerenciar-eventos",
+    title: "10. Criar e gerenciar eventos",
+    audiences: ["GROUP_ADMIN", "ADMIN", "OWNER"],
+    note: "O admin de um grupo só enxerga e edita os eventos daquele grupo. Admin e Owner do sistema enxergam os de todos.",
+    intro:
+      "Quem administra ganha as ações de criar, editar e excluir eventos, além de designar quem pode lançar QSOs.",
+    steps: [
+      {
+        text: 'A lista traz o botão "Novo Evento" e, em cada linha, as ações Editar e Excluir. A coluna "Grupo" mostra de quem é o evento.',
         shot: {
           src: "/ajuda/40-eventos-admin.webp",
           alt: "Lista de eventos vista por um administrador, com o botão Novo Evento e as ações Editar e Excluir",
@@ -347,7 +379,10 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
         },
       },
       {
-        text: "No formulário, informe o nome e o período. As datas são no horário local do seu navegador — o rótulo lembra disso. O ícone de calendário abre um seletor com hora e minuto.",
+        text: 'No formulário, comece pelo nome e pelo grupo organizador. O seletor traz só os grupos que você administra — se estiver vazio, você ainda não administra nenhum, e o evento não pode ser criado.',
+      },
+      {
+        text: "Informe o período. As datas são no horário local do seu navegador — o rótulo lembra disso. O ícone de calendário abre um seletor com hora e minuto.",
         shot: {
           src: "/ajuda/43-novo-evento-calendario.webp",
           alt: "Seletor de data aberto, com o calendário do mês, os campos de hora e minuto e o botão OK",
@@ -365,7 +400,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
         },
       },
       {
-        text: 'Ao final, escolha o template do certificado. Deixando "Padrão (sem template)", o evento usa o modelo padrão do sistema.',
+        text: 'Ao final, escolha o template do certificado. A lista traz os templates do grupo escolhido mais os marcados como "(global)", disponíveis a todos. Deixando "Padrão (sem template)", o evento usa o modelo padrão do sistema.',
         shot: {
           src: "/ajuda/44-novo-evento-template.webp",
           alt: "Campo Observações, seletor de Template do Certificado e botão Salvar",
@@ -389,14 +424,14 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
   },
   {
     slug: "templates-bandas-modos",
-    title: "10. Personalizar certificados, bandas e modos",
-    audiences: ["ADMIN", "OWNER"],
-    note: 'O template "Padrão" não pode ser renomeado nem excluído: ele é o modelo usado por todo evento que não tem template próprio.',
+    title: "11. Personalizar certificados, bandas e modos",
+    audiences: ["GROUP_ADMIN", "ADMIN", "OWNER"],
+    note: 'O admin de grupo cuida dos templates do seu grupo; bandas e modos são catálogos do sistema inteiro e ficam com Admin e Owner. O template "Padrão" é global e não pode ser renomeado nem excluído: é o modelo usado por todo evento que não tem template próprio.',
     intro:
-      'O menu "Configurações" reúne os catálogos do sistema: os templates de certificado e as listas de bandas e modos.',
+      'O menu "Configurações" reúne os catálogos: os templates de certificado e as listas de bandas e modos.',
     steps: [
       {
-        text: 'O menu aparece só para Admin e Owner, com os atalhos para Templates, Bandas e Modos.',
+        text: 'O menu traz Templates para quem administra qualquer grupo, e Bandas e Modos só para Admin e Owner do sistema.',
         shot: {
           src: "/ajuda/41-menu-configuracoes.webp",
           alt: "Menu superior com o item Configurações aberto, mostrando Templates, Bandas e Modos",
@@ -405,7 +440,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
         },
       },
       {
-        text: 'Na lista de templates, "Novo Template" pede só um nome e leva direto para o editor. A coluna "Eventos" mostra quantos eventos usam cada modelo.',
+        text: 'A lista traz os templates que você pode editar, com a coluna "Grupo" identificando o dono de cada um. "Novo Template" pede o nome e o grupo, e leva direto para o editor. A coluna "Eventos" mostra quantos eventos usam cada modelo.',
         shot: {
           src: "/ajuda/46-templates-lista.webp",
           alt: "Lista de templates com as colunas Nome, Imagem, Eventos e Criado em",
@@ -446,7 +481,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
   },
   {
     slug: "usuarios-e-auditoria",
-    title: "11. Usuários e trilha de auditoria",
+    title: "12. Usuários e trilha de auditoria",
     audiences: ["OWNER"],
     intro:
       "Só o Owner administra cargos e consulta o histórico de ações administrativas.",
