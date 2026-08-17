@@ -23,6 +23,7 @@ export default {
         token.id = user.id!;
         token.role = user.role;
         token.callsign = user.callsign;
+        token.groupAdmin = user.groupAdmin ?? false;
       }
       return token;
     },
@@ -31,6 +32,7 @@ export default {
         session.user.id = token.id as string;
         session.user.role = token.role as "OWNER" | "ADMIN" | "OPERATOR" | "USER";
         session.user.callsign = token.callsign as string;
+        session.user.groupAdmin = token.groupAdmin === true;
       }
       return session;
     },

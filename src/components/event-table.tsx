@@ -19,19 +19,23 @@ type EventRow = {
   name: string;
   startDate: Date;
   endDate: Date;
+  group: { id: string; name: string };
   eventBands: { band: { id: string; name: string; label: string } }[];
   eventModes: { mode: { id: string; name: string; label: string } }[];
   template: { id: string; name: string } | null;
   _count: { qsos: number };
+  /** Quem administra o grupo do evento edita e exclui; o operador designado, não. */
+  canEdit: boolean;
 };
 
-export function EventTable({ events, showActions = true }: { events: EventRow[]; showActions?: boolean }) {
+export function EventTable({ events }: { events: EventRow[] }) {
   return (
     <div className="overflow-x-auto">
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Nome</TableHead>
+          <TableHead className="hidden md:table-cell">Grupo</TableHead>
           <TableHead>Início</TableHead>
           <TableHead className="hidden md:table-cell">Fim</TableHead>
           <TableHead className="hidden lg:table-cell">Modalidades</TableHead>
@@ -44,7 +48,7 @@ export function EventTable({ events, showActions = true }: { events: EventRow[];
       <TableBody>
         {events.length === 0 && (
           <TableRow>
-            <TableCell colSpan={8} className="text-center text-muted-foreground">
+            <TableCell colSpan={9} className="text-center text-muted-foreground">
               Nenhum evento cadastrado.
             </TableCell>
           </TableRow>
@@ -52,6 +56,9 @@ export function EventTable({ events, showActions = true }: { events: EventRow[];
         {events.map((event) => (
           <TableRow key={event.id}>
             <TableCell className="font-medium">{event.name}</TableCell>
+            <TableCell className="hidden md:table-cell">
+              <Badge variant="outline">{event.group.name}</Badge>
+            </TableCell>
             <TableCell>
               <LocalDateTime date={event.startDate} showTime />
             </TableCell>
@@ -91,7 +98,7 @@ export function EventTable({ events, showActions = true }: { events: EventRow[];
                     QSOs
                   </Button>
                 </Link>
-                {showActions && (
+                {event.canEdit && (
                   <>
                     <Link href={`/admin/events/${event.id}/edit`}>
                       <Button variant="outline" size="sm">

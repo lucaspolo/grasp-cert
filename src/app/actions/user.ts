@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-utils";
+import { requireAnyGroupAdmin, requireEventGroupAdmin } from "@/lib/group-access";
 import { recordAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -97,7 +98,7 @@ export async function deleteUser(userId: string) {
 }
 
 export async function assignOperatorToEvent(userId: string, eventId: string) {
-  const session = await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireEventGroupAdmin(eventId);
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -136,7 +137,7 @@ export async function assignOperatorToEvent(userId: string, eventId: string) {
 }
 
 export async function removeOperatorFromEvent(userId: string, eventId: string) {
-  const session = await requireRole(["OWNER", "ADMIN"]);
+  const session = await requireEventGroupAdmin(eventId);
 
   await prisma.eventOperator.delete({
     where: { eventId_userId: { eventId, userId } },
@@ -160,7 +161,7 @@ export async function removeOperatorFromEvent(userId: string, eventId: string) {
 }
 
 export async function listEventOperators(eventId: string) {
-  await requireRole(["OWNER", "ADMIN"]);
+  await requireEventGroupAdmin(eventId);
 
   return prisma.eventOperator.findMany({
     where: { eventId },
@@ -173,7 +174,7 @@ export async function listEventOperators(eventId: string) {
 }
 
 export async function listOperatorUsers() {
-  await requireRole(["OWNER", "ADMIN"]);
+  await requireAnyGroupAdmin();
 
   return prisma.user.findMany({
     where: { role: "OPERATOR" },

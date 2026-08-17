@@ -6,6 +6,7 @@ const VARIANTS: Record<TutorialAudience, "default" | "secondary" | "outline"> = 
   PUBLIC: "outline",
   USER: "secondary",
   OPERATOR: "secondary",
+  GROUP_ADMIN: "default",
   ADMIN: "default",
   OWNER: "default",
 };

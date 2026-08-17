@@ -12,7 +12,7 @@ export type AuditActor = {
 export type AuditEntry = {
   /** Ação em notação entidade.verbo, ex.: "user.role_updated" */
   action: string;
-  entityType: "user" | "event" | "qso" | "template";
+  entityType: "user" | "event" | "qso" | "template" | "group";
   entityId?: string | null;
   /** Descrição legível do que aconteceu, para exibição na tela de auditoria */
   summary: string;

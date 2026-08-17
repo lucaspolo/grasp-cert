@@ -49,6 +49,9 @@ export default async function PublicEventPage({
     <div className="mx-auto max-w-4xl px-4 py-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold">{stats.name}</h1>
+        <p className="mt-1 text-muted-foreground">
+            Organizado por <span className="font-medium">{stats.groupName}</span>
+        </p>
         <p className="mt-2 flex items-center gap-2 text-muted-foreground">
           <Calendar className="h-4 w-4" />
           <LocalDateTime date={stats.startDate} showTime /> —{" "}

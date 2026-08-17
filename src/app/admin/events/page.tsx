@@ -2,37 +2,31 @@ import { listEvents } from "@/app/actions/event";
 import { EventTable } from "@/components/event-table";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { adminGroupIds, isPlatformAdmin } from "@/lib/group-access";
 import Link from "next/link";
-import type { AppRole } from "@/lib/auth-utils";
 
 export default async function EventsPage() {
   const session = await auth();
-  const role = session?.user?.role as AppRole;
+  const platformAdmin = isPlatformAdmin(session?.user?.role);
 
-  let events;
-  if (role === "OPERATOR") {
-    // OPERATORs see only events they are assigned to
-    const assignments = await prisma.eventOperator.findMany({
-      where: { userId: session!.user.id },
-      select: { eventId: true },
-    });
-    const eventIds = assignments.map((a) => a.eventId);
-    events = await prisma.event.findMany({
-      where: { id: { in: eventIds } },
-      orderBy: { startDate: "desc" },
-      include: {
-        _count: { select: { qsos: true } },
-        template: { select: { id: true, name: true } },
-        eventBands: { include: { band: true } },
-        eventModes: { include: { mode: true } },
-      },
-    });
-  } else {
-    events = await listEvents();
-  }
+  // `listEvents` já entrega só o que a sessão enxerga (grupos administrados +
+  // eventos designados). Os ids dos grupos administrados servem para decidir,
+  // linha a linha, quem ganha os botões de editar e excluir: um operador que
+  // também administre outro grupo vê os dois tipos de evento na mesma lista.
+  const [events, myGroupIds] = await Promise.all([
+    listEvents(),
+    platformAdmin || !session?.user?.id
+      ? Promise.resolve<string[]>([])
+      : adminGroupIds(session.user.id),
+  ]);
 
-  const canCreateEvent = role === "OWNER" || role === "ADMIN";
+  const adminOf = new Set(myGroupIds);
+  const rows = events.map((event) => ({
+    ...event,
+    canEdit: platformAdmin || adminOf.has(event.groupId),
+  }));
+
+  const canCreateEvent = platformAdmin || myGroupIds.length > 0;
 
   return (
     <div>
@@ -44,7 +38,7 @@ export default async function EventsPage() {
           </Link>
         )}
       </div>
-      <EventTable events={events} showActions={canCreateEvent} />
+      <EventTable events={rows} />
     </div>
   );
 }

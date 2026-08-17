@@ -13,6 +13,13 @@ enum Role {
   USER
 }
 
+// Cargo DENTRO de um grupo, independente do cargo global do usuário: um
+// USER global pode ser ADMIN do seu grupo (e só dele).
+enum GroupRole {
+  ADMIN
+  MEMBER
+}
+
 model User {
   id             String          @id @default(uuid())
   callsign       String          @unique
@@ -30,11 +37,45 @@ model User {
   updatedAt      DateTime        @updatedAt @map("updated_at")
 
   assignedEvents EventOperator[]
+  groupMemberships GroupMember[]
   twoFactor      TwoFactorAuth?
   recoveryCodes  TwoFactorRecoveryCode[]
   trustedDevices TrustedDevice[]
 
   @@map("users")
+}
+
+// Clube/entidade que organiza eventos. Cada grupo tem seus próprios admins,
+// templates e eventos; o cargo global OWNER/ADMIN enxerga todos os grupos.
+model Group {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  /** Indicativo do clube, quando existe (ex.: PY2AA). Só informativo. */
+  callsign    String?
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members   GroupMember[]
+  events    Event[]
+  templates Template[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id        String    @id @default(uuid())
+  groupId   String    @map("group_id")
+  userId    String    @map("user_id")
+  role      GroupRole @default(MEMBER)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@map("group_members")
 }
 
 model TwoFactorAuth {
@@ -116,20 +157,29 @@ model AuditLog {
 model Template {
   id         String   @id @default(uuid())
   name       String
+  // Null = template GLOBAL da plataforma, disponível para qualquer grupo e
+  // gerenciado só pelo OWNER. É o caso do "Padrão", usado como fallback por
+  // evento sem template — por isso a coluna é opcional.
+  groupId    String?  @map("group_id")
   bgImage    Bytes?   @map("bg_image")
   bgMimeType String?  @map("bg_mime_type")
   config     Json?
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
+  group  Group?  @relation(fields: [groupId], references: [id])
   events Event[]
 
+  @@index([groupId])
   @@map("templates")
 }
 
 model Event {
   id           String    @id @default(uuid())
   name         String
+  // Obrigatório: todo evento pertence a um grupo, que define quem o
+  // administra e quais templates ele pode usar.
+  groupId      String    @map("group_id")
   startDate    DateTime  @map("start_date")
   endDate      DateTime  @map("end_date")
   templateId   String?   @map("template_id")
@@ -137,12 +187,14 @@ model Event {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
+  group     Group           @relation(fields: [groupId], references: [id])
   template  Template?       @relation(fields: [templateId], references: [id])
   qsos      QSO[]
   operators EventOperator[]
   eventBands EventBand[]
   eventModes EventMode[]
 
+  @@index([groupId])
   @@map("events")
 }
 

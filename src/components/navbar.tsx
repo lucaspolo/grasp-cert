@@ -38,7 +38,22 @@ export async function Navbar() {
   const role = session.user.role as AppRole;
   const isOwner = role === "OWNER";
   const isOwnerOrAdmin = isOwner || role === "ADMIN";
-  const hasAdminAccess = isOwnerOrAdmin || role === "OPERATOR";
+  // Claim do JWT: um admin de grupo pode não ter cargo global nenhum. Como
+  // todo claim, leva até 10 minutos para refletir uma promoção — o mesmo
+  // atraso que já vale para mudança de cargo global.
+  const isGroupAdmin = session.user.groupAdmin === true;
+  const hasAdminAccess = isOwnerOrAdmin || role === "OPERATOR" || isGroupAdmin;
+  const canManageGroups = isOwnerOrAdmin || isGroupAdmin;
+
+  const settingsItems = [
+    ...(canManageGroups ? [{ href: "/admin/templates", label: "Templates" }] : []),
+    ...(isOwnerOrAdmin
+      ? [
+          { href: "/admin/bands", label: "Bandas" },
+          { href: "/admin/modes", label: "Modos" },
+        ]
+      : []),
+  ];
 
   return (
     <header className="border-b bg-background">
@@ -78,15 +93,16 @@ export async function Navbar() {
                 Eventos
               </Link>
             )}
-            {isOwnerOrAdmin && (
-              <NavDropdown
-                label="Configurações"
-                items={[
-                  { href: "/admin/templates", label: "Templates" },
-                  { href: "/admin/bands", label: "Bandas" },
-                  { href: "/admin/modes", label: "Modos" },
-                ]}
-              />
+            {canManageGroups && (
+              <Link
+                href="/admin/groups"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Grupos
+              </Link>
+            )}
+            {settingsItems.length > 0 && (
+              <NavDropdown label="Configurações" items={settingsItems} />
             )}
             {/* Por último e sem condicional: os itens acima variam com o cargo,
                 e uma posição fixa mantém o menu previsível. */}
@@ -123,6 +139,7 @@ export async function Navbar() {
         <MobileNav
           callsign={session.user.callsign ?? ""}
           role={role}
+          isGroupAdmin={isGroupAdmin}
           signOutAction={async () => {
             "use server";
             await signOut({ redirectTo: "/login" });

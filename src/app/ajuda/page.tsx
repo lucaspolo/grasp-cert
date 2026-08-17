@@ -29,9 +29,14 @@ const ROLES_OVERVIEW: { audience: TutorialAudience; description: string }[] = [
       "Lança QSOs — só nos eventos em que foi designado — e recebe o certificado de operador.",
   },
   {
+    audience: "GROUP_ADMIN",
+    description:
+      "Não é um cargo da conta, e sim uma função dentro de um grupo: quem administra um clube cria os eventos e os templates dele e chama os membros — só nesse grupo. Qualquer cargo pode acumular essa função.",
+  },
+  {
     audience: "ADMIN",
     description:
-      "Cria e edita eventos, designa operadores e cuida dos templates, bandas e modos.",
+      "Cria e edita eventos, designa operadores e cuida dos templates, bandas e modos — em qualquer grupo.",
   },
   {
     audience: "OWNER",
@@ -57,9 +62,11 @@ export default function AjudaPage() {
           Os cargos
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Cada conta tem um cargo, e o cargo decide o que aparece no menu. Se um
-          item descrito aqui não estiver no seu menu, é porque o seu cargo não
-          dá acesso a ele — peça ao Owner do sistema.
+          Cada conta tem um cargo, e o cargo decide o que aparece no menu. Além
+          dele, você pode administrar um ou mais grupos — o que dá acesso aos
+          eventos e templates daqueles grupos, e de nenhum outro. Se um item
+          descrito aqui não estiver no seu menu, é porque o seu cargo não dá
+          acesso a ele — peça ao Owner do sistema ou ao admin do seu grupo.
         </p>
         <dl className="mt-4 space-y-3">
           {ROLES_OVERVIEW.map(({ audience, description }) => (

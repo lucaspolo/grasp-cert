@@ -7,7 +7,8 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    template: { update: vi.fn() },
+    template: { findUnique: vi.fn(), update: vi.fn() },
+    groupMember: { findMany: vi.fn(), findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
   },
 }));
@@ -41,6 +42,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   authMock.mockResolvedValue({
     user: { id: "owner-1", role: "OWNER", callsign: "PY2ADM" },
+  });
+  (prisma.template.findUnique as unknown as Mock).mockResolvedValue({
+    name: "Padrão",
+    groupId: null,
+    _count: { events: 0 },
   });
   updateMock.mockResolvedValue({ name: "Padrão" });
 });

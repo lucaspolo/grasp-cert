@@ -3,7 +3,10 @@ import type { Mock } from "vitest";
 import type { JWT } from "next-auth/jwt";
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { user: { findUnique: vi.fn() } },
+  prisma: {
+    user: { findUnique: vi.fn() },
+    groupMember: { findFirst: vi.fn() },
+  },
 }));
 
 import { prisma } from "@/lib/prisma";
@@ -13,6 +16,7 @@ import {
 } from "./jwt-refresh";
 
 const findUniqueMock = prisma.user.findUnique as unknown as Mock;
+const groupMemberMock = prisma.groupMember.findFirst as unknown as Mock;
 
 const NOW_MS = 1_800_000_000_000; // época fixa para os testes
 const nowSec = Math.floor(NOW_MS / 1000);
@@ -29,6 +33,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();
   vi.setSystemTime(NOW_MS);
+  groupMemberMock.mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -55,6 +60,34 @@ describe("refreshTokenClaims", () => {
     expect(result).not.toBeNull();
     expect(result?.role).toBe("USER"); // rebaixamento refletido sem re-login
     expect(result?.refreshedAt).toBe(nowSec);
+  });
+
+  // O claim `groupAdmin` é o que deixa o proxy (Edge, sem banco) liberar
+  // /admin para quem administra um grupo sem ter cargo global.
+  it("token velho: reflete promoção a admin de grupo", async () => {
+    findUniqueMock.mockResolvedValue({
+      role: "USER",
+      callsign: "PY2ABC",
+      sessionVersion: 1,
+    });
+    groupMemberMock.mockResolvedValue({ id: "gm-1" });
+
+    const result = await refreshTokenClaims({ ...baseToken, groupAdmin: false });
+
+    expect(result?.groupAdmin).toBe(true);
+  });
+
+  it("token velho: perda do cargo no grupo zera o claim", async () => {
+    findUniqueMock.mockResolvedValue({
+      role: "USER",
+      callsign: "PY2ABC",
+      sessionVersion: 1,
+    });
+    groupMemberMock.mockResolvedValue(null);
+
+    const result = await refreshTokenClaims({ ...baseToken, groupAdmin: true });
+
+    expect(result?.groupAdmin).toBe(false);
   });
 
   it("usuário excluído: invalida a sessão (null)", async () => {

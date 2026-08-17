@@ -17,6 +17,8 @@ import { toast } from "sonner";
 type TemplateRow = {
   id: string;
   name: string;
+  /** Null = template global da plataforma, disponível para qualquer grupo. */
+  group: { id: string; name: string } | null;
   bgMimeType: string | null;
   createdAt: Date;
   _count: { events: number };
@@ -29,6 +31,7 @@ export function TemplateTable({ templates }: { templates: TemplateRow[] }) {
       <TableHeader>
         <TableRow>
           <TableHead>Nome</TableHead>
+          <TableHead className="hidden md:table-cell">Grupo</TableHead>
           <TableHead className="hidden md:table-cell">Imagem</TableHead>
           <TableHead>Eventos</TableHead>
           <TableHead className="hidden md:table-cell">Criado em</TableHead>
@@ -38,7 +41,7 @@ export function TemplateTable({ templates }: { templates: TemplateRow[] }) {
       <TableBody>
         {templates.length === 0 && (
           <TableRow>
-            <TableCell colSpan={5} className="text-center text-muted-foreground">
+            <TableCell colSpan={6} className="text-center text-muted-foreground">
               Nenhum template cadastrado.
             </TableCell>
           </TableRow>
@@ -46,6 +49,13 @@ export function TemplateTable({ templates }: { templates: TemplateRow[] }) {
         {templates.map((t) => (
           <TableRow key={t.id}>
             <TableCell className="font-medium">{t.name}</TableCell>
+            <TableCell className="hidden md:table-cell">
+              {t.group ? (
+                <Badge variant="outline">{t.group.name}</Badge>
+              ) : (
+                <Badge variant="secondary">Global</Badge>
+              )}
+            </TableCell>
             <TableCell className="hidden md:table-cell">
               {t.bgMimeType ? (
                 <Badge variant="secondary">Sim</Badge>

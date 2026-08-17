@@ -4,7 +4,7 @@ import { CredentialsSignin } from "next-auth";
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import authConfig from "./auth.config";
-import { refreshTokenClaims } from "@/lib/jwt-refresh";
+import { isAdminOfSomeGroup, refreshTokenClaims } from "@/lib/jwt-refresh";
 import { TRUSTED_DEVICE_COOKIE, hashDeviceToken } from "@/lib/two-factor";
 import { verifyUserSecondFactor } from "@/lib/second-factor";
 import {
@@ -151,6 +151,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           role: user.role,
           callsign: user.callsign,
           sessionVersion: user.sessionVersion,
+          groupAdmin: await isAdminOfSomeGroup(user.id),
         };
       },
     }),
@@ -165,6 +166,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = user.role;
         token.callsign = user.callsign;
         token.sessionVersion = user.sessionVersion;
+        token.groupAdmin = user.groupAdmin ?? false;
         token.refreshedAt = Math.floor(Date.now() / 1000);
         return token;
       }
