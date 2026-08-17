@@ -29,6 +29,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { ROLE_LABELS } from "@/lib/role-labels";
 import { toast } from "sonner";
 
 type UserRow = {
@@ -44,13 +45,6 @@ type UserRow = {
 };
 
 const ROLES = ["OWNER", "ADMIN", "OPERATOR", "USER"] as const;
-
-const ROLE_LABELS: Record<string, string> = {
-  OWNER: "Owner",
-  ADMIN: "Admin",
-  OPERATOR: "Operador",
-  USER: "Usuário",
-};
 
 
 export function UserTable({ users }: { users: UserRow[] }) {
