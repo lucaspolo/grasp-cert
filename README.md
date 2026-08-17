@@ -56,6 +56,18 @@ The app will be available at [http://localhost:3000](http://localhost:3000).
 |----------|----------|
 | `PY2ADM` | `admin123` |
 
+### Demo Data (local dev only)
+
+`make db-seed-demo` adds one account per role, an event in progress, a future
+event and a handful of QSOs — enough to exercise every screen. It is additive
+and idempotent, and refuses to run against anything but a local database.
+
+| Callsign | Role | Password |
+|----------|------|----------|
+| `PY1DEM` | ADMIN | `demo1234` |
+| `PY2DEM` | OPERATOR (assigned to the demo event) | `demo1234` |
+| `PY3DEM` | USER (participant in 4 QSOs) | `demo1234` |
+
 ## Available Commands
 
 | Command | Description |
