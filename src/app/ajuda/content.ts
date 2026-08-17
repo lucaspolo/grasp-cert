@@ -9,8 +9,21 @@ export type TutorialShot = {
   caption?: string;
 };
 
+export type TutorialLink = {
+  href: string;
+  label: string;
+  /** Baixa em vez de abrir no navegador. */
+  download?: boolean;
+};
+
 export type TutorialStep = {
   text: string;
+  /**
+   * O texto do passo é renderizado como texto puro — não há Markdown nem
+   * autolink. Um caminho escrito no meio da frase não vira link clicável, então
+   * qualquer coisa para abrir ou baixar vem por aqui.
+   */
+  link?: TutorialLink;
   shot?: TutorialShot;
 };
 
@@ -143,7 +156,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
         },
       },
       {
-        text: '"Baixar PNG" abre a imagem do certificado numa nova aba; "Baixar PDF" gera o mesmo desenho em página A5 paisagem, pronto para impressão. Os dois formatos são idênticos por construção.',
+        text: '"Baixar PNG" abre a imagem do certificado numa nova aba; "Baixar PDF" gera o mesmo desenho numa página paisagem de 800×500 pt (cerca de 28×18 cm), pronta para impressão. Os dois formatos são idênticos por construção.',
         shot: {
           src: "/ajuda/26-certificado-participante.webp",
           alt: "Certificado de participação com o indicativo em destaque, período do evento, modos, faixas e QR Code",
@@ -281,7 +294,12 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
         text: 'Para levar os dados embora, use "Exportar ADIF" no topo da tela: o download traz todos os QSOs do evento em formato padrão.',
       },
       {
-        text: "Quer testar antes? Baixe o arquivo de exemplo usado nesta seção — ele contém quatro contatos válidos, um repetido e dois com erro de propósito: /ajuda/exemplo.adi",
+        text: "Quer testar antes? O arquivo de exemplo usado nesta seção contém quatro contatos válidos, um repetido e dois com erro de propósito — é o que produz o resumo acima.",
+        link: {
+          href: "/ajuda/exemplo.adi",
+          label: "Baixar exemplo.adi",
+          download: true,
+        },
       },
     ],
   },

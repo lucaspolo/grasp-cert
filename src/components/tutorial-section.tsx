@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Download } from "lucide-react";
 import { RoleBadge } from "@/components/role-badge";
 import type { TutorialSection as TutorialSectionData } from "@/app/ajuda/content";
 
@@ -39,6 +40,16 @@ export function TutorialSection({ section }: { section: TutorialSectionData }) {
             </span>
             <div className="min-w-0 flex-1 space-y-3">
               <p>{step.text}</p>
+              {step.link && (
+                <a
+                  href={step.link.href}
+                  download={step.link.download}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                >
+                  <Download aria-hidden className="h-4 w-4" />
+                  {step.link.label}
+                </a>
+              )}
               {step.shot && <Shot shot={step.shot} />}
             </div>
           </li>
