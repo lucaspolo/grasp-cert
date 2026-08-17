@@ -156,3 +156,7 @@ Certificates are generated on-the-fly at `GET /api/cert/[qsoId]` using Next.js `
 - QSO details (frequency, mode, RST, date/time)
 - Configurable background (uploaded image or default blue gradient)
 - Text fields positioned via a JSON `TemplateConfig` stored on the event
+
+## License
+
+[MIT](LICENSE) © 2026 Lucas Polo
