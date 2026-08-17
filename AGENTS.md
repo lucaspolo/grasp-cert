@@ -147,6 +147,7 @@ prisma/
 | Segurança | `src/lib/rate-limit.ts` (janela fixa no Postgres), `src/lib/jwt-refresh.ts` (revalidação do JWT), `src/lib/second-factor.ts` (verificação 2FA com anti-replay), `src/lib/secret-crypto.ts` (secrets TOTP cifrados, env `TOTP_ENC_KEY`), `next.config.ts` (security headers) |
 | Observabilidade | `src/instrumentation.ts` + `src/instrumentation-client.ts` + `sentry.*.config.ts` (Sentry, env `NEXT_PUBLIC_SENTRY_DSN`, só ativo em produção), `src/lib/sentry-scrub.ts` (beforeSend — nunca remover), `src/app/api/health/route.ts` (healthcheck público) |
 | Database | `prisma/schema.prisma`, `src/lib/prisma.ts` |
+| Tutorial (`/ajuda`) | `src/app/ajuda/content.ts` (conteúdo como dado), `src/app/ajuda/page.tsx`, `src/components/tutorial-section.tsx`, `src/components/role-badge.tsx`, `src/lib/role-labels.ts`, capturas em `public/ajuda/` |
 | Testes | `vitest.config.mts`, `src/**/*.test.ts` (Vitest, ambiente node; `server-only` tem stub em `tests/stubs/`) |
 
 ## Development Commands
@@ -159,10 +160,15 @@ make up / down  # Docker Compose control
 make db-push    # Sync Prisma schema to DB (dev only — prefer db-migrate for schema changes)
 make db-migrate # Create/apply Prisma migrations (keeps history for migrate deploy)
 make db-seed    # Seed admin user + default template
+make db-seed-demo # Dados fictícios de desenvolvimento (um usuário por papel, evento e QSOs)
 make db-studio  # Open Prisma Studio
 make test       # Run Vitest suite
 ```
 
+- `prisma/seed-demo.ts` é **só para desenvolvimento**: cria contas com senha conhecida (`PY1DEM`/`PY2DEM`/`PY3DEM`, senha `demo1234`) para exercitar cada papel. É aditivo e idempotente (upsert com IDs `demo-*`, nunca apaga nada) e aborta se `DATABASE_URL` não apontar para localhost.
+
+- O tutorial em `/ajuda` é rota **pública** (listada em `src/proxy.ts`) e o conteúdo vive numa estrutura de dados tipada, não em JSX solto — `src/app/ajuda/content.test.ts` trava que toda captura referenciada existe em `public/ajuda/`. Ao mexer numa tela, conferir se a seção correspondente e a captura continuam válidas. **O processo de atualização está na skill `manual-ajuda`** (`.claude/skills/manual-ajuda/SKILL.md`): quando recapturar, como configurar o navegador, e as armadilhas de dados de demonstração.
+- Rótulos de cargo saem de `src/lib/role-labels.ts` (fonte única compartilhada entre `user-table.tsx` e o tutorial) — não redeclarar em outro lugar.
 - Mutações administrativas devem registrar auditoria via `recordAudit()` de `src/lib/audit.ts` (exceção deliberada: criação de QSO, por volume).
 - Toda função exportada em arquivo `"use server"` é um endpoint HTTP público — deve começar com `requireRole(...)` ou `auth()` (exceção deliberada e comentada: `listPublicEvents`).
 - Rate limiting usa `consumeRateLimit()` de `src/lib/rate-limit.ts` (estado no Postgres — nunca em memória, o app roda em serverless). Verificação de OTP/código de recuperação passa sempre por `verifyUserSecondFactor()` de `src/lib/second-factor.ts`, que aplica rate limit, anti-replay e criptografia do secret.
