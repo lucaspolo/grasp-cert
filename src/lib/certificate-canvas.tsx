@@ -59,7 +59,6 @@ export type CertificateCanvasProps = {
   verifyUrl: string;
   bgSrc: string | null;
   qrSrc: string | null;
-  watermarkSrc: string | null;
   /** Amplia o raster de saída sem mexer no layout (o PDF usa 3×). */
   scale?: number;
 };
@@ -71,7 +70,6 @@ export function CertificateCanvas({
   verifyUrl,
   bgSrc,
   qrSrc,
-  watermarkSrc,
   scale = 1,
 }: CertificateCanvasProps) {
   const hasCustomBg = !!bgSrc;
@@ -101,24 +99,6 @@ export function CertificateCanvas({
         lineHeight: LINE_HEIGHT,
       }}
     >
-      {/* Marca d'água — só sem imagem de fundo própria */}
-      {!hasCustomBg && watermarkSrc && (
-        <img
-          src={watermarkSrc}
-          alt=""
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 300,
-            height: 300,
-            objectFit: "contain",
-            opacity: 0.15,
-          }}
-        />
-      )}
-
       {/* Borda decorativa — só sem imagem de fundo própria */}
       {!hasCustomBg && (
         <div

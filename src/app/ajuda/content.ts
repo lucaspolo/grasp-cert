@@ -449,7 +449,7 @@ export const TUTORIAL_SECTIONS: TutorialSection[] = [
         },
       },
       {
-        text: "Você pode enviar uma arte de fundo (PNG, JPEG ou WebP, de 800×500 a 1920×1200 pixels, até 5 MB). Sem imagem, o certificado usa o fundo amarelo padrão com selo, borda e marca d'água.",
+        text: "Você pode enviar uma arte de fundo (PNG, JPEG ou WebP, de 800×500 a 1920×1200 pixels, até 5 MB). Sem imagem, o certificado usa o fundo amarelo padrão com selo e borda.",
         shot: {
           src: "/ajuda/47-template-imagem-fundo.webp",
           alt: "Cartão de imagem de fundo do template com o seletor de arquivo e o botão Enviar",

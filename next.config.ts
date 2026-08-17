@@ -15,15 +15,12 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // O certificado lê a fonte e a marca d'água do disco em tempo de execução;
-  // sem declarar, o tracing da Vercel não inclui os arquivos na função e a
-  // leitura falha calada (o catch cai na face embutida / sem marca d'água).
+  // O certificado lê a fonte do disco em tempo de execução; sem declarar, o
+  // tracing da Vercel não inclui o arquivo na função e a leitura falha calada
+  // (o catch cai na face embutida).
   outputFileTracingIncludes: {
-    "/api/cert/**": ["./public/fonts/**", "./public/logo_grasp.png"],
-    "/api/verificar-certificado/**": [
-      "./public/fonts/**",
-      "./public/logo_grasp.png",
-    ],
+    "/api/cert/**": ["./public/fonts/**"],
+    "/api/verificar-certificado/**": ["./public/fonts/**"],
   },
   async headers() {
     return [

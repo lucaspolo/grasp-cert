@@ -161,16 +161,6 @@ function certificateFonts() {
   ];
 }
 
-/** Marca d'água usada só quando o template não tem imagem de fundo própria. */
-function loadWatermark(): string | null {
-  try {
-    const logoPath = join(process.cwd(), "public", "logo_grasp.png");
-    return `data:image/png;base64,${readFileSync(logoPath).toString("base64")}`;
-  } catch {
-    return null;
-  }
-}
-
 /** Nome de arquivo do download: certificado-nome-do-evento-py2abc.ext */
 export function certificateFilename(
   data: CertificateData,
@@ -233,7 +223,6 @@ export async function renderCertificate(
   data: CertificateData,
   init?: { headers?: Record<string, string>; scale?: number }
 ): Promise<ImageResponse> {
-  const hasCustomBg = !!data.bgDataUri;
   // O layout é sempre escrito em 800×500; a escala só amplia o raster de saída
   // (o PDF usa isso para não sair serrilhado ao dar zoom ou imprimir).
   const scale = init?.scale ?? 1;
@@ -257,7 +246,6 @@ export async function renderCertificate(
         verifyUrl={data.verifyUrl}
         bgSrc={data.bgDataUri}
         qrSrc={`data:image/svg+xml,${encodeURIComponent(qrSvg)}`}
-        watermarkSrc={hasCustomBg ? null : loadWatermark()}
         scale={scale}
       />
     ),
