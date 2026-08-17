@@ -84,6 +84,9 @@ export function MobileNav({ callsign, role, signOutAction }: MobileNavProps) {
                   </NavLink>
                 </>
               )}
+              <NavLink href="/ajuda" onClick={() => setOpen(false)}>
+                Ajuda
+              </NavLink>
             </nav>
 
             <div className="border-t px-4 py-4 space-y-3">

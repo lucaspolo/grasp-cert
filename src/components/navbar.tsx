@@ -18,6 +18,12 @@ export async function Navbar() {
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <Link
+              href="/ajuda"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              Ajuda
+            </Link>
+            <Link
               href="/login"
               className="text-sm font-medium text-muted-foreground hover:text-foreground"
             >
@@ -82,6 +88,14 @@ export async function Navbar() {
                 ]}
               />
             )}
+            {/* Por último e sem condicional: os itens acima variam com o cargo,
+                e uma posição fixa mantém o menu previsível. */}
+            <Link
+              href="/ajuda"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Ajuda
+            </Link>
           </nav>
         </div>
         <div className="hidden md:flex items-center gap-3">
